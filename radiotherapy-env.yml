@@ -1,0 +1,8 @@
+name: radiotherapy-env
+
+dependencies:
+  matplotlib
+  numpy
+  pandas
+  seaborn
+  sklearn
