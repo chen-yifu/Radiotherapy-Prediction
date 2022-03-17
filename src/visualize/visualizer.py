@@ -45,25 +45,28 @@ def plot_col(col_name):
             sns.heatmap(contingency_table, annot=str_percent, fmt="", ax=ax, cmap='crest')
             plt.show()
         else:
-            f1 = plt.figure(1)
-            plt.scatter(neg_df, [0] * len(neg_df), label='RTx=0', c="blue", alpha=0.1)
-            plt.scatter(pos_df, [1] * len(pos_df), label='RTx=1', c="orange", alpha=0.1)
-            plt.legend(loc='best')
-            f1.show()
-            f2 = plt.figure(2)
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            fig.suptitle("{} ({})".format(col_name, col_type))
+            ax1.scatter(neg_df, [0] * len(neg_df), label='RTx=0', c="blue", alpha=0.1)
+            ax1.scatter(pos_df, [1] * len(pos_df), label='RTx=1', c="orange", alpha=0.1)
+            ax1.legend(loc='best')
             sns.distplot(neg_df,  kde=False, label='RTx=0')
             sns.distplot(pos_df,  kde=False,label='RTx=1')
-            f2.show()
+            fig.show()
     except Exception as e:
         raise e
-    plt.show()
     
     
+import sys
 if __name__ == "__main__":
-    while True:
-        col_name = input("Type a column name to visualize...\n")
-        if col_name in df.columns:
-            plot_col(col_name)
-        else:
-            print("Try again.")
-    
+    if "vizall" in sys.argv:
+        for col in df.columns:
+            plot_col(col)
+    else:
+        while True:
+            col_name = input("Type a column name to visualize...\n")
+            if col_name in df.columns:
+                plot_col(col_name)
+            else:
+                print("Try again.")
+        
