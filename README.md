@@ -5,4 +5,4 @@ To visualize data:
 `python3 src/visualize/visualizer.py`
 
 To visualize all columns:
-`python3 src/visualize/visualizer.py --vizall`
+`python3 src/visualize/visualizer.py -vizall`
