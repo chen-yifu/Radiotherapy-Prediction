@@ -16,4 +16,4 @@ def my_print(*args, add_sep=False, color=bcolors.WARNING):
     text = " ".join(args)
     if add_sep:
         text = "-"*50+"\n"+text+"\n"+"-"*50
-    print(color, text, color)
+    print(color, text, bcolors.ENDC)
