@@ -1,3 +1,5 @@
+from utils.printers import *
+
 def rename_columns(df, df_metadata):
     rename_dict = {}
     for col in df.columns:
@@ -5,3 +7,5 @@ def rename_columns(df, df_metadata):
         prefix = row["Group"].item()
         rename_dict[col] = prefix+"_"+col
     df.rename(columns=rename_dict, inplace=True)
+    
+    my_print("✅ Column Renamming - Added PRE/INT/POS column name prefixes.")

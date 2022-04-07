@@ -5,6 +5,7 @@
 # - filling in missing values through imputation
 
 from src.preprocess import expert_impute, rename_columns
+from src.preprocess.cleanse_dataset import cleanse_dataset
 from utils.printers import *
 from utils.loaders import *
 from src.preprocess import *
@@ -24,12 +25,15 @@ def preprocess():
     df = pd.read_csv(df_path)
     
     # Column Renaming - add PRE/INT/POS prefix to column names
-    temp = rename_columns.rename_columns(df, df_metadata)
+    rename_columns.rename_columns(df, df_metadata)
     
     # Feature Engineering - consolidate and engineer new features
     # TODO
     
     # TODO Dataset Cleansing - remove noisy values such as "n/a"
+    cleanse_dataset.cleanse_dataset(df, df_metadata)
     
     # TODO Expert Imputation - apply manual imputation rules
-        
+    
+    
+    # TODO ML Imputation - Apply KNN and Random Forest Imputers
