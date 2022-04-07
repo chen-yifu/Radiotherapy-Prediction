@@ -17,3 +17,7 @@ def my_print(*args, add_sep=False, color=bcolors.WARNING):
     if add_sep:
         text = "-"*50+"\n"+text+"\n"+"-"*50
     print(color, text, bcolors.ENDC)
+
+def my_print_header(*args):
+    my_print("-"*100)
+    my_print(*args)
