@@ -4,6 +4,7 @@ from tqdm import tqdm
 def cleanse_dataset(df, metadata_df):
     my_print_header("Dataset Cleansing...")
     cleansed_locs = {}
+    global row, val, orig_val
     for col in tqdm(metadata_df["Field"]):
         script = metadata_df.loc[metadata_df["Field"] == col]["Cleansing_Script"].values[0]
         for i, row in df.iterrows():
@@ -11,7 +12,6 @@ def cleanse_dataset(df, metadata_df):
                 continue
             if str(row[col]) == "nan":
                 continue
-            global val, orig_val
             val = orig_val = row[col]
             exec(script, globals())
             if str(orig_val) != "nan" and orig_val != val:
