@@ -10,10 +10,10 @@ To visualize all columns:
 To run tests:
 `python -m pytest tests/`
 
-## Preprocess Module:
-1. *Feature Engineering*. Construct new interaction features guided by clinical insights.
-2. *Column Renaming*. Prefix "PRE_", "INT_", and "POS_" to indacate pre-operative, intra-operative, and post-operative columns.
-3. *Dataset Cleansing*. Systematically replacing noisy values using predetermined rules.
+## Preprocessing Module
+1. *Column Renaming*. Prefix "PRE_", "INT_", and "POS_" to indacate pre-operative, intra-operative, and post-operative columns.
+2. *Dataset Cleansing*. Systematically replacing noisy values using predetermined rules.
+3. *Feature Engineering*. Construct new interaction features guided by clinical insights.
 4. *Missing Value Imputation*. Fill in missing values using imputation strategies and machine learning. For each column:
     1. Determine the type of column as real, ordinal, or categorical
     2. Apply K-Nearest Neighbor Imputer. Perform grid-search for optimal `K`.
