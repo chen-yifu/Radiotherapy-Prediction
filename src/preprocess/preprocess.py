@@ -39,10 +39,10 @@ def preprocess():
     engineer_features.engineer_features(df, df_metadata)
     
     # Dataset Cleansing - remove noisy values such as "n/a"
-    # cleansed_locs = cleanse_dataset.cleanse_dataset(df, df_metadata)
+    cleansed_locs = cleanse_dataset.cleanse_dataset(df, df_metadata)
     
     # Expert Imputation - apply manual imputation rules
-    # imputed_locs = expert_impute.expert_impute(df, df_metadata)
+    imputed_locs = expert_impute.expert_impute(df, df_metadata)
     
     # TODO Visualize Changed Cells
     
@@ -55,8 +55,7 @@ def preprocess():
     very_solid_df = get_solid_df.get_solid_df(df, df_metadata, sparsity_threshold=very_solid_threshold)
     
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
-    df_KNN = impute_missing.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
     df_RF = impute_missing.impute_missing_RF(df, df_metadata, solid_df, very_solid_df)
-    df_KNN
+    df_KNN = impute_missing.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
     
     df.to_csv(out_path)
