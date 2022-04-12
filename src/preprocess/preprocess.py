@@ -5,7 +5,7 @@
 # - filling in missing values through imputation
 
 # TODO clean up imports
-from src.preprocess import expert_impute, rename_columns, impute_missing, time_to_numeric
+from src.preprocess import expert_impute, impute_column, rename_columns, time_to_numeric
 from src.preprocess.cleanse_dataset import cleanse_dataset
 from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
@@ -64,6 +64,6 @@ def preprocess(debug_mode=False):
     
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
     # df_RF = impute_missing.impute_missing_RF(df, df_metadata, solid_df, very_solid_df)
-    impute_missing.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
+    df_KNN = impute_column.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
     df_preprocessed = very_solid_df
     save_experiment_df(df_preprocessed, "AllTranTrainVal-preprocessed.csv", "preprocessed csv file")
