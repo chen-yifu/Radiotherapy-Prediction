@@ -32,46 +32,47 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
     
-    # TODO: for col in tqdm(df.columns):
-    col = "PRE_img_size"
-    temp_df = very_solid_df.copy(deep=True)
-    temp_df = temp_df.drop("PRE_record_id", axis=1)
-    if col not in temp_df.columns:
-        temp_df[col] = df[col]
-        
-    # Perform grid-search to find the optimal n_neighbors for KNN Imputer
-    best_rmse = float("inf")
-    best_n = 0
-    for n_neighbors in range(1, 100, 2):
-        compares = {} # Mapping schema: {column1: {gt: int}, ...}
-        total_sq_error = 0
-        total_count = 0
-        KNN = KNNImputer(n_neighbors=n_neighbors)
-        for i in range(0, len(df)):
-            try:
-                # Temporarily set a cell to nan, and impute
-                cur_gt = temp_df.loc[i, col]
-                if str(cur_gt) == "nan":
+    for col in tqdm(df.columns):
+    # col = "PRE_img_size"
+        print(f"Imputing {col}")
+        temp_df = very_solid_df.copy(deep=True)
+        temp_df = temp_df.drop("PRE_record_id", axis=1)
+        if col not in temp_df.columns:
+            temp_df[col] = df[col]
+            
+        # Perform grid-search to find the optimal n_neighbors for KNN Imputer
+        best_rmse = float("inf")
+        best_n = 0
+        for n_neighbors in range(1, 100, 2):
+            compares = {} # Mapping schema: {column1: {gt: int}, ...}
+            total_sq_error = 0
+            total_count = 0
+            KNN = KNNImputer(n_neighbors=n_neighbors)
+            for i in range(0, len(df)):
+                try:
+                    # Temporarily set a cell to nan, and impute
+                    cur_gt = temp_df.loc[i, col]
+                    if str(cur_gt) == "nan":
+                        continue
+                    temp_df.loc[i, col] = np.nan
+                    imp_df = impute(KNN, temp_df)
+                    cur_imp = imp_df.loc[i, col]
+                    total_sq_error += (cur_imp - cur_gt)**2
+                    total_count += 1
+                    temp_df.loc[i, col] = cur_gt # Restore ground truth of this cell
+                    compares[(i, col)] = [cur_gt, cur_imp]
+                except ValueError as e:
+                    # TODO solve try-except block about length mismatch 44/45
+                    print(f"Skipped row {i}")
                     continue
-                temp_df.loc[i, col] = np.nan
-                imp_df = impute(KNN, temp_df)
-                cur_imp = imp_df.loc[i, col]
-                total_sq_error += (cur_imp - cur_gt)**2
-                total_count += 1
-                temp_df.loc[i, col] = cur_gt # Restore ground truth of this cell
-                compares[(i, col)] = [cur_gt, cur_imp]
-            except ValueError as e:
-                # TODO solve try-except block about length mismatch 44/45
-                print(f"Skipped row {i}")
-                continue
-        
-        rmse = (total_sq_error/total_count) ** 0.5
-        rmse = round(rmse, 5)
-        if rmse < best_rmse:
-            best_n = n_neighbors
-            best_rmse = rmse
-            compares  = compares
-        print(f"n_neighbors = {n_neighbors}. RMSE = {rmse} | Best n_neighbors = {best_n}. Best RMSE = {best_rmse}")
+            
+            rmse = (total_sq_error/total_count) ** 0.5
+            rmse = round(rmse, 5)
+            if rmse < best_rmse:
+                best_n = n_neighbors
+                best_rmse = rmse
+                compares  = compares
+            print(f"n_neighbors = {n_neighbors}. RMSE = {rmse} | Best n_neighbors = {best_n}. Best RMSE = {best_rmse}")
     return compares
 
 # def RF_grid_search(df, df_metadata, solid_df, very_solid_df, shallow=True):
