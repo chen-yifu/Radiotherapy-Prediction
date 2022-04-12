@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from dateutil.relativedelta import relativedelta
-from utils.IO import *
+from utils.io import *
 
 def engineer_features(df, df_metadata):
     # Construct new columns from existing data
