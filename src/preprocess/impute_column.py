@@ -6,7 +6,6 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 import pandas as pd
 import numpy as np
-import random
 from collections import defaultdict
 from utils.printers import *
 from utils.get_timestamp import *
@@ -24,11 +23,13 @@ class ColumnGridSearchResults:
         #   {hyperparameter_setting1: 
         #       {error: float,
         #       accuracy: float, 
-        #       F1: float},
+        #       F1: float,
+        #       compares: [(ground truth, imputed), (ground truth, imputed), ...]},
         #   hyperparameter_setting2:
         #       {error: float,
         #       accuracy: float,
-        #       F1:float},
+        #       F1:float,
+        #       compares: [(ground truth, imputed), (ground truth, imputed), ...]},
         #   ...
         #   }    
         # },
@@ -53,19 +54,16 @@ def impute(imputer, df):
     new_df.index = df.index
     return new_df
 
-def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name="PRE_img_size"):
+def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name):
     # Use the very_solid_df to impute all columns that contain missing cells
     # my_print_header("Imputing missing values using KNN Imputer...")
         # Return the optimal KNN imputer for this dataset
     my_print_header("Performing KNN grid search to find the optimal n_neighbors for KNN Imputer.")
-
-    metrics = result_holder.KNN_metrics
     
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
     
     # for col in tqdm(df.columns):
-    column_name = "PRE_img_size"
     my_print(f"Imputing {column_name}", plain=True)
     temp_df = very_solid_df.copy(deep=True)
     temp_df = temp_df.drop("PRE_record_id", axis=1)
@@ -75,7 +73,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_n = 0
-    for n_neighbors in range(1, 5, 2):
+    for n_neighbors in range(1, 4, 2):
         compares = {} # Mapping schema: {column1: {gt: int}, ...}
         total_sq_error = 0
         total_count = 0
@@ -105,8 +103,18 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
             best_n = n_neighbors
             best_rmse = rmse
             compares  = compares
-        my_print(f"n_neighbors = {n_neighbors}. RMSE = {rmse} | Best n_neighbors = {best_n}. Best RMSE = {best_rmse}", plain=True)
-            
+        hyperparameter = frozenset({"n_neighbors":n_neighbors})
+        result_holder.KNN_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
+        my_print(
+                f"n_neighbors = {n_neighbors}. RMSE = {rmse} "
+                f"| Best n_neighbors = {best_n}. Best RMSE = {best_rmse}",
+                 plain=True
+                )
+        # {column1: 
+        #   {hyperparameter_setting1: 
+        #       {error: float,
+        #       accuracy: float, 
+        #       F1: float},
     return compares
 
 # def RF_grid_search(df, df_metadata, solid_df, very_solid_df, shallow=True):
@@ -117,15 +125,13 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
 #     return
 
 
-def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name="PRE_img_size"):
+def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name):
     # Use the very_solid_df to impute all columns that contain missing cells
         # Return the optimal KNN imputer for this dataset
         
     my_print_header("Performing RF grid search to find the optimal max_depth and n_estimators for RF Imputer.")
-    metrics = result_holder.RF_metrics
     
     # TODO: for col in tqdm(df.columns):
-    column_name = "PRE_img_size"
     temp_df = very_solid_df.copy(deep=True)
     temp_df = temp_df.drop("PRE_record_id", axis=1)
     if column_name not in temp_df.columns:
@@ -168,16 +174,23 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, c
                 best_rmse = rmse
                 compares  = compares
             my_print(
-                f"n_estimators = {n_estimators}, max_depth = {max_depth}. RMSE = {rmse} |\
- Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}", plain=True)
+                f"n_estimators = {n_estimators}, max_depth = {max_depth}. RMSE = {rmse} |"
+                "Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}",
+                plain=True
+            )
+            hyperparameter = frozenset({"n_estimators":n_estimators, "max_depth":max_depth})
+            result_holder.RF_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
     return compares
 
 
-def impute_column(df, df_metadata, solid_df, very_solid_df, column_name="PRE_img_size"):
+def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
     
     my_print_header(f"Performing RF and KNN grid searches to find the best imputer for {column_name}...")
     
-    result_holder = ColumnGridSearchResults()
+    result_holder = ColumnGridSearchResults(column_name)
     
-    impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
+    # impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
     impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
+    
+    return df, result_holder
+
