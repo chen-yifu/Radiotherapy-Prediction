@@ -14,11 +14,12 @@ from utils.loaders import *
 from utils.get_timestamp import *
 from utils.savers import *
 from src.preprocess import *
-import pandas as pd
 from sklearn.impute import *
-import numpy as np
 from collections import Counter
-import json, pickle
+import pandas as pd
+import numpy as np
+import json
+import pickle
 import os
 
 col_type_path = "data/metadata/col_types.json"
@@ -64,6 +65,10 @@ def preprocess(debug_mode=False):
     
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
     # df_RF = impute_missing.impute_missing_RF(df, df_metadata, solid_df, very_solid_df)
-    df_KNN = impute_column.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
+    # df_KNN = impute_column.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
+    result_holders = []
+    df_preprocessed, result_holder = impute_column.impute_column(df, df_metadata, solid_df, very_solid_df, "PRE_img_size")
+    result_holders.append(result_holder)
     df_preprocessed = very_solid_df
     save_experiment_df(df_preprocessed, "AllTranTrainVal-preprocessed.csv", "preprocessed csv file")
+    save_experiment_pickle(result_holders, "GridSearchResults.pkl", "KNN and RF imputation hyperparamter search results.")
