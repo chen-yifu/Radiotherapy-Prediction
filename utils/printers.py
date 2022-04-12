@@ -11,12 +11,16 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-def my_print(*args, add_sep=False, color=bcolors.WARNING):
+def my_print(*args, add_sep=False, color=bcolors.WARNING, plain=False):
     # print with orange
     text = " ".join(args)
     if add_sep:
         text = "-"*50+"\n"+text+"\n"+"-"*50
-    print(color, text, bcolors.ENDC)
+    if plain:
+        print(text)
+    else:
+        print(color, text, bcolors.ENDC)
+
 
 def my_print_header(*args):
     my_print("-"*100)
