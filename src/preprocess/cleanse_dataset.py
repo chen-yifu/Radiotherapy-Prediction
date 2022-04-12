@@ -17,5 +17,5 @@ def cleanse_dataset(df, metadata_df):
             if str(orig_val) != "nan" and orig_val != val:
                 df.loc[i, col] = val
                 cleansed_locs[(i, col)] = (orig_val, val)
-    print(f"✅ Dataset Cleansing - Used expert manual rules to replace noisy values. {len(cleansed_locs)} cells were changed.")
+    my_print(f"✅ Dataset Cleansing - Used expert manual rules to replace noisy values. {len(cleansed_locs)} cells were changed.", plain=True)
     return cleansed_locs

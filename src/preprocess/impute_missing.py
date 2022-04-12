@@ -9,14 +9,15 @@ import numpy as np
 import random
 from collections import defaultdict
 from utils.printers import *
+from utils.get_timestamp import *
 from tqdm import tqdm
-df_compare_path = "data/output/AllTranTrainVal-CompareImpute.csv"
+
+df_compare_path = f"data/output/{get_timestamp()}/AllTranTrainVal-CompareImpute.csv"
+hyperparameter_path = f"data/output/"
+
 
 def impute(imputer, df):
     new_df = pd.DataFrame(imputer.fit_transform(df))
-    # print("NEWDF", new_df.columns)
-    # print("DF", df.columns)
-    # print(set(new_df.columns).difference(set(df.columns)))
     new_df.columns = df.columns
     new_df.index = df.index
     return new_df
@@ -24,17 +25,18 @@ def impute(imputer, df):
 def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
     # Use the very_solid_df to impute all columns that contain missing cells
     
-    my_print_header("Imputing missing values using KNN Imputer...")
+    # my_print_header("Imputing missing values using KNN Imputer...")
         # Return the optimal KNN imputer for this dataset
-    print("Performing KNN grid search to find the optimal n_neighbors for KNN Imputer.")
+    my_print_header("Performing KNN grid search to find the optimal n_neighbors for KNN Imputer.")
     metrics = {} # Mapping schema: {column1: {accuracy: float, F1: float, ...}}
     
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
     
-    for col in tqdm(df.columns):
-    # col = "PRE_img_size"
-        print(f"Imputing {col}")
+    # for col in tqdm(df.columns):
+    if True:
+        col = "PRE_img_size"
+        my_print(f"Imputing {col}", plain=True)
         temp_df = very_solid_df.copy(deep=True)
         temp_df = temp_df.drop("PRE_record_id", axis=1)
         if col not in temp_df.columns:
@@ -43,7 +45,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
         # Perform grid-search to find the optimal n_neighbors for KNN Imputer
         best_rmse = float("inf")
         best_n = 0
-        for n_neighbors in range(1, 100, 2):
+        for n_neighbors in range(1, 5, 2):
             compares = {} # Mapping schema: {column1: {gt: int}, ...}
             total_sq_error = 0
             total_count = 0
@@ -63,7 +65,8 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
                     compares[(i, col)] = [cur_gt, cur_imp]
                 except ValueError as e:
                     # TODO solve try-except block about length mismatch 44/45
-                    print(f"Skipped row {i}")
+                    # my_print(f"Skipped row {i}")
+                    raise e
                     continue
             
             rmse = (total_sq_error/total_count) ** 0.5
@@ -72,7 +75,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
                 best_n = n_neighbors
                 best_rmse = rmse
                 compares  = compares
-            print(f"n_neighbors = {n_neighbors}. RMSE = {rmse} | Best n_neighbors = {best_n}. Best RMSE = {best_rmse}")
+            my_print(f"n_neighbors = {n_neighbors}. RMSE = {rmse} | Best n_neighbors = {best_n}. Best RMSE = {best_rmse}", plain=True)
     return compares
 
 # def RF_grid_search(df, df_metadata, solid_df, very_solid_df, shallow=True):
@@ -86,9 +89,9 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df):
 def impute_missing_RF(df, df_metadata, solid_df, very_solid_df):
     # Use the very_solid_df to impute all columns that contain missing cells
     
-    my_print_header("Imputing missing values using RF Imputer...")
+    # my_print_header("Imputing missing values using RF Imputer...")
         # Return the optimal KNN imputer for this dataset
-    print("Performing RF grid search to find the optimal max_depth and n_estimators for RF Imputer.")
+    my_print_header("Performing RF grid search to find the optimal max_depth and n_estimators for RF Imputer.")
     metrics = {} # Mapping schema: {column1: {accuracy: float, F1: float, ...}}
     
     # TODO: for col in tqdm(df.columns):
@@ -125,7 +128,7 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df):
                         compares[(idx, col)] = [cur_gt, cur_imp]
                 except ValueError as e:
                     # TODO solve try-except block about length mismatch 44/45
-                    print(f"Skipped split {i}")
+                    my_print(f"Skipped split {i}", plain=True)
                     continue
             
             rmse = round((total_sq_error/total_count) ** 0.5, 5)
@@ -134,9 +137,9 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df):
                 best_max_depth = max_depth
                 best_rmse = rmse
                 compares  = compares
-            print(
-                f"max_depth = {max_depth}, n_estimators = {n_estimators}. RMSE = {rmse} |\
- Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}")
+            my_print(
+                f"n_estimators = {n_estimators}, max_depth = {max_depth}. RMSE = {rmse} |\
+ Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}", plain=True)
     return compares
 
 

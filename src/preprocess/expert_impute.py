@@ -19,5 +19,6 @@ def expert_impute(df, metadata_df):
             if str(orig_val) != "nan" and orig_val != val:
                 df.loc[i, col] = val
                 imputed_locs[(i, col)] = (orig_val, val)
-    print(f"✅ Expert Imputation - Used expert manual rules to impute missing values in some columns. {len(imputed_locs)} cells were filled.")
+    my_print(
+        f"✅ Expert Imputation - Used expert manual rules to impute missing values in some columns. {len(imputed_locs)} cells were filled.", plain=True)
     return imputed_locs
