@@ -1,4 +1,4 @@
-from utils.IO import *
+from utils.io import *
 import pandas as pd
 from tqdm import tqdm
 

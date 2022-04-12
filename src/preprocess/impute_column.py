@@ -7,7 +7,7 @@ from sklearn.metrics import mean_squared_error
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils.IO import *
+from utils.io import *
 from utils.get_timestamp import *
 from tqdm import tqdm
 

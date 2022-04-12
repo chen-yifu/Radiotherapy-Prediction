@@ -10,7 +10,7 @@ from src.preprocess.cleanse_dataset import cleanse_dataset
 from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
 from utils.get_timestamp import *
-from utils.IO import *
+from utils.io import *
 from src.preprocess import *
 from sklearn.impute import *
 from collections import Counter

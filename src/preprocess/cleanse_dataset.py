@@ -1,5 +1,5 @@
 import numpy as np
-from utils.IO import *
+from utils.io import *
 from tqdm import tqdm
 
 def cleanse_dataset(df, metadata_df):

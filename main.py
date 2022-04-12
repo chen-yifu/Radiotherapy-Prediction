@@ -4,7 +4,7 @@ import numpy as np
 from collections import Counter
 from src.preprocess import preprocess
 from utils.setup import *
-from utils.IO import *
+from utils.io import *
 
 # p = Printer()
 if __name__ == "__main__":

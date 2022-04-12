@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "src/**/__pycache__": true,
+    "src/**/__pycache__.*": true,
+    "src/preprocess/**/*.pyc": true,
+    "**/*.pyc": true,
+    "**/__pycache__": true,
+    "**/__pycache__.*": true
+  }
+}
