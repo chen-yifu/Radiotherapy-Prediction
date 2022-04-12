@@ -4,7 +4,7 @@ import numpy as np
 from collections import Counter
 from src.preprocess import preprocess
 from utils.setup import *
-from utils.printers import *
+from utils.IO import *
 
 # p = Printer()
 if __name__ == "__main__":
@@ -14,6 +14,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     debug_mode = True  if args.debug else False
 
+    experiment_dir = initialize_experiment_folder()
+    
     my_print(f"Running experiments in {'fast-debug mode' if debug_mode else 'release mode'}...")
     setup()
     

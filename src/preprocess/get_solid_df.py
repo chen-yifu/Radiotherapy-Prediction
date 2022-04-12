@@ -1,4 +1,4 @@
-from utils.printers import *
+from utils.IO import *
 import pandas as pd
 from tqdm import tqdm
 
@@ -16,7 +16,11 @@ def get_solid_df(df, df_metadata, sparsity_threshold):
             if len(col_group) and col_group.item() != "PRE":
                 columns.remove(col)
             
-    print(f"{len(columns)} out of {len(df.columns)} all columns are PRE and have ≤ {sparsity_threshold} missing cells.")
+    my_print(
+        f"{len(columns)} out of {len(df.columns)} all columns are PRE"
+        f"and have ≤ {sparsity_threshold} missing cells.", 
+        plain=True
+        )
     
     result_df = pd.DataFrame(df[columns])
     return result_df
