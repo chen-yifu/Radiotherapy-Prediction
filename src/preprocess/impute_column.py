@@ -7,7 +7,7 @@ from sklearn.metrics import mean_squared_error
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils.printers import *
+from utils.IO import *
 from utils.get_timestamp import *
 from tqdm import tqdm
 
@@ -73,7 +73,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_n = 0
-    for n_neighbors in range(1, 4, 2):
+    for n_neighbors in range(1, 100, 2):
         compares = {} # Mapping schema: {column1: {gt: int}, ...}
         total_sq_error = 0
         total_count = 0
@@ -103,7 +103,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
             best_n = n_neighbors
             best_rmse = rmse
             compares  = compares
-        hyperparameter = frozenset({"n_neighbors":n_neighbors})
+        hyperparameter = frozenset({"n_neighbors": n_neighbors})
         result_holder.KNN_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
         my_print(
                 f"n_neighbors = {n_neighbors}. RMSE = {rmse} "
@@ -115,7 +115,7 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
         #       {error: float,
         #       accuracy: float, 
         #       F1: float},
-    return compares
+    # return compares
 
 # def RF_grid_search(df, df_metadata, solid_df, very_solid_df, shallow=True):
 #     # Return the optimal RF imputer for this dataset
@@ -141,8 +141,8 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, c
     best_rmse = float("inf")
     best_max_depth = 0
     best_n = 0
-    for max_depth in range(3, 15, 2):
-        for n_estimators in range(3, 20, 2):
+    for max_depth in range(1, 20, 2):
+        for n_estimators in range(1, 20, 2):
             kf = KFold(n_splits=5, shuffle=True, random_state=max_depth*1000+n_estimators)
             compares = {} # Mapping schema: {column1: {gt: int}, ...}
             total_sq_error = 0
@@ -175,12 +175,12 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, c
                 compares  = compares
             my_print(
                 f"n_estimators = {n_estimators}, max_depth = {max_depth}. RMSE = {rmse} |"
-                "Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}",
+                f"Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}",
                 plain=True
             )
-            hyperparameter = frozenset({"n_estimators":n_estimators, "max_depth":max_depth})
+            hyperparameter = frozenset({"n_estimators": n_estimators, "max_depth": max_depth})
             result_holder.RF_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
-    return compares
+    # return compares
 
 
 def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
