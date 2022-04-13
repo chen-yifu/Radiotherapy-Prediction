@@ -47,11 +47,11 @@ def save_experiment_pickle(object, file_name: str, description: str):
 def add_to_log(content):
     log_path = os.path.join(out_dir, cur_timestamp, "log.txt")
     if not os.path.exists(log_path):
-        content = f"Use the following command in terminal to view this log file:"
-                  f"cat {log_path}"
-                  f"\n{content}"
+        content = f"Use the following command in terminal to view this log file:\ncat {log_path}\n" \
+            + content
     with open(log_path, 'a') as f:
-        f.write(content + "\n")
+        f.write(content + '\n')
+
 
 
 ### PRINTER FUNCTIONS BELOW ### 
