@@ -20,6 +20,7 @@ def load_col_type(path):
 
 
 ### SAVER FUNCTIONS ### 
+
 def initialize_experiment_folder():
     # Make a folder for saving the experiment data
     global cur_timestamp
@@ -53,8 +54,8 @@ def add_to_log(content):
         f.write(content + '\n')
 
 
-
 ### PRINTER FUNCTIONS BELOW ### 
+
 # Helper to print in terminal with colors
 class bcolors:
     HEADER = '\033[95m'
@@ -83,3 +84,5 @@ def my_print(*args, add_sep=False, color=bcolors.WARNING, plain=False):
 def my_print_header(*args):
     my_print("-"*100)
     my_print(*args)
+    
+    

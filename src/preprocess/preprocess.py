@@ -31,16 +31,17 @@ solid_threshold = 0.20 # Max percentage of missing cells for a column to be cons
 
 
 def preprocess(debug_mode=False):
+
     # Read Dataset
     df_metadata = pd.read_excel(metadata_path, sheet_name="Sheet1")
     df = pd.read_csv(df_path)
-    
+
     # Column Renaming - add PRE/INT/POS prefix to column names
     rename_columns.rename_columns(df, df_metadata)
-    
+
     # TODO Feature Engineering - consolidate and engineer new features
     engineer_features.engineer_features(df, df_metadata)
-    
+
     if debug_mode:
         df = df.iloc[:10, :]
     else:
