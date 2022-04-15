@@ -12,10 +12,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="enable fast debug mode")
     args = parser.parse_args()
-    debug_mode = True  if args.debug else False
+    global debug_mode
+    debug_mode = True if args.debug else False
 
     experiment_dir = initialize_experiment_folder()
-    
     my_print(f"Running experiments in {'fast-debug mode' if debug_mode else 'release mode'}...")
     setup()
     

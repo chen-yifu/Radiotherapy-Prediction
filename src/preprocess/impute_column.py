@@ -1,80 +1,109 @@
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import IterativeImputer
-from sklearn.impute import *
+from sklearn.impute import KNNImputer
 from sklearn.model_selection import KFold
-from sklearn.metrics import mean_squared_error
+# from sklearn.metrics import mean_squared_error
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from utils.io import *
-from utils.get_timestamp import *
-from tqdm import tqdm
+from utils.io import my_print_header, my_print
+from utils.get_timestamp import get_timestamp
 
-df_compare_path = f"data/output/{get_timestamp()}/AllTranTrainVal-CompareImpute.csv"
-hyperparameter_path = f"data/output/"
+df_compare_path = f"data/output/{get_timestamp()}/Impute_Comparison.csv"
+hyperparameter_path = "data/output/"
+
 
 class ColumnGridSearchResults:
-    # The class to store the results of grid-search for a column
-    # Provides functions to get the best model, and the best hyperparameters
+    """
+    An object to save the results of grid-search for a column
+    Also provides functions to get the best model, and the best hyperparameters
+
+    Metric mapping schema:
+    {column1:
+        {hyperparameter_setting1:
+            {error: float,
+            accuracy: float,
+            F1: float,
+            compares: [(ground truth, imputed), (ground truth, imputed), ...]},
+        hyperparameter_setting2:
+            {error: float,
+            accuracy: float,
+            F1:float,
+            compares: [(ground truth, imputed), (ground truth, imputed), ...]},
+        ...
+        }
+    },
+    {column 2: ...}"""
     def __init__(self, column_name):
-        # Metric mapping schema:
-        # {column1: 
-        #   {hyperparameter_setting1: 
-        #       {error: float,
-        #       accuracy: float, 
-        #       F1: float,
-        #       compares: [(ground truth, imputed), (ground truth, imputed), ...]},
-        #   hyperparameter_setting2:
-        #       {error: float,
-        #       accuracy: float,
-        #       F1:float,
-        #       compares: [(ground truth, imputed), (ground truth, imputed), ...]},
-        #   ...
-        #   }    
-        # },
-        # {column 2: ...}
+
         self.column_name = column_name
         self.KNN_metrics = defaultdict(lambda: defaultdict(float))
-        self.RF_metrics  = defaultdict(lambda: defaultdict(float))
+        self.RF_metrics = defaultdict(lambda: defaultdict(float))
 
     def get_best_model(self, metric_name):
-        # Returns the best model and the best hyperparameters for this model
+        "Returns the best model and the best hyperparameters for this model"
         if metric_name == "accuracy":
             # TODO ...
             pass
         elif metric_name == "F1":
             # TODO implement get best model by F1
             pass
-        
 
-def impute(imputer, df):
+
+def impute(imputer, df: pd.DataFrame):
+    """Perform imputation on a dataframe using the given imputer
+
+    Args:
+        imputer (sklearn.Impute): the imputer to use
+        df (pd.DataFrame): the dataframe to impute
+
+    Returns:
+        pd.DataFrame: the imputed dataframe
+    """
     new_df = pd.DataFrame(imputer.fit_transform(df))
     new_df.columns = df.columns
     new_df.index = df.index
     return new_df
 
-def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name):
-    # Use the very_solid_df to impute all columns that contain missing cells
-    # my_print_header("Imputing missing values using KNN Imputer...")
-        # Return the optimal KNN imputer for this dataset
-    my_print_header("Performing KNN grid search to find the optimal n_neighbors for KNN Imputer.")
-    
+
+def find_best_KNN(
+    df: pd.DataFrame,
+    df_metadata: pd.DataFrame,
+    solid_df: pd.DataFrame,
+    very_solid_df: pd.DataFrame,
+    result_holder: ColumnGridSearchResults,
+    column_name: str,
+    standardize: bool = True
+):
+    """Grid-search to find the optimal hyperparameters, and impute using KNN.
+    Args:
+        df (pd.DataFrame): The dataframe to impute
+        df_metadata (pd.DataFrame): The metadata of the dataframe
+        solid_df (pd.DataFrame): The solid (low sparsity) dataframe
+        very_solid_df (pd.DataFrame): The very low sparsity dataframe
+        result_holder (ColumnGridSearchResults): Object to store the results
+        column_name (str): The name of the column to impute
+        standardize (bool, optional): Whether standarsize euclidean distance
+    Returns:
+        KNNImputer: the optimal KNN imputer
+    """
+
+    my_print_header("Performing KNN grid search to optimize n_neighbors.")
+
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
-    
-    # for col in tqdm(df.columns):
+
     my_print(f"Imputing {column_name}", plain=True)
     temp_df = very_solid_df.copy(deep=True)
     temp_df = temp_df.drop("PRE_record_id", axis=1)
     if column_name not in temp_df.columns:
         temp_df[column_name] = df[column_name]
-        
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_n = 0
     for n_neighbors in range(1, 100, 2):
-        compares = {} # Mapping schema: {column1: {gt: int}, ...}
+        compares = {}  # Mapping schema: {column1: {gt: int}, ...}
         total_sq_error = 0
         total_count = 0
         KNN = KNNImputer(n_neighbors=n_neighbors)
@@ -89,46 +118,52 @@ def impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, 
                 cur_imp = imp_df.loc[i, column_name]
                 total_sq_error += (cur_imp - cur_gt)**2
                 total_count += 1
-                temp_df.loc[i, column_name] = cur_gt # Restore ground truth of this cell
+                temp_df.loc[i, column_name] = cur_gt  # Restore ground truth
                 compares[(i, column_name)] = [cur_gt, cur_imp]
-            except ValueError as e:
+            except ValueError:
                 # TODO solve try-except block about length mismatch 44/45
-                # my_print(f"Skipped row {i}")
-                raise e
+                my_print(f"Skipped row {i} due to an error.")
                 continue
-        
+
         rmse = (total_sq_error/total_count) ** 0.5
         rmse = round(rmse, 5)
         if rmse < best_rmse:
             best_n = n_neighbors
             best_rmse = rmse
-            compares  = compares
+            compares = compares
         hyperparameter = frozenset({"n_neighbors": n_neighbors})
-        result_holder.KNN_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
+        result_holder.KNN_metrics[hyperparameter] = {
+            "rmse": rmse,
+            "compares": compares
+            }
         my_print(
                 f"n_neighbors = {n_neighbors}. RMSE = {rmse} "
                 f"| Best n_neighbors = {best_n}. Best RMSE = {best_rmse}",
-                 plain=True
+                plain=True
                 )
-        # {column1: 
-        #   {hyperparameter_setting1: 
-        #       {error: float,
-        #       accuracy: float, 
-        #       F1: float},
-    # return compares
-
-# def RF_grid_search(df, df_metadata, solid_df, very_solid_df, shallow=True):
-#     # Return the optimal RF imputer for this dataset
-#     # If shallow, then max_depth ≤ 5 and n_estimators ≤ 10
-#     my_print_header("Performing Random Forest grid search to find the optimal max_depth and n_estimators for Random Forest Imputer.")
-    
-#     return
+    my_print(f"KNN: Best n_neighbors = {best_n}. Best RMSE = {best_rmse}")
+    return KNNImputer(n_neighbors=best_n)
 
 
-def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name):
-    # Use the very_solid_df to impute all columns that contain missing cells
-        # Return the optimal KNN imputer for this dataset
-        
+def find_best_RF(
+    df: pd.DataFrame,
+    df_metadata: pd.DataFrame,
+    solid_df: pd.DataFrame,
+    very_solid_df: pd.DataFrame,
+    result_holder: ColumnGridSearchResults,
+    column_name: str
+):
+    """Perform grid-search to find the optimal Random Forest hyperparameters, and impute the column.
+    Args:
+        df (pd.DataFrame): The dataframe to impute
+        df_metadata (pd.DataFrame): The metadata of the dataframe
+        solid_df (pd.DataFrame): The solid (low sparsity) dataframe
+        very_solid_df (pd.DataFrame): The very solid (very low sparsity) dataframe
+        result_holder (ColumnGridSearchResults): The object to store the results
+        column_name (str): The name of the column to impute
+    Returns:
+        IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
+    """
     my_print_header("Performing RF grid search to find the optimal max_depth and n_estimators for RF Imputer.")
     
     # TODO: for col in tqdm(df.columns):
@@ -184,13 +219,24 @@ def impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, c
 
 
 def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
-    
+    """Compare the optimal KNN and RF imputer for this column, and use the best one to impute the column.
+
+    Args:
+        df (_type_): _description_
+        df_metadata (_type_): _description_
+        solid_df (_type_): _description_
+        very_solid_df (_type_): _description_
+        column_name (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     my_print_header(f"Performing RF and KNN grid searches to find the best imputer for {column_name}...")
     
     result_holder = ColumnGridSearchResults(column_name)
     
     # impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
-    impute_missing_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
+    find_best_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
     
     return df, result_holder
 
