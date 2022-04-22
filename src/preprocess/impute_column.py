@@ -74,7 +74,8 @@ def find_best_KNN(
     very_solid_df: pd.DataFrame,
     result_holder: ColumnGridSearchResults,
     column_name: str,
-    standardize: bool = True
+    standardize: bool = True,
+    n_neighbors_range: range = range(1, 100, 2)
 ):
     """Grid-search to find the optimal hyperparameters, and impute using KNN.
     Args:
@@ -89,7 +90,7 @@ def find_best_KNN(
         KNNImputer: the optimal KNN imputer
     """
 
-    my_print_header("Performing KNN grid search to optimize n_neighbors.")
+    my_print_header(f"Performing KNN grid search to optimize n_neighbors over {n_neighbors_range}.")
 
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
@@ -102,7 +103,7 @@ def find_best_KNN(
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_n = 0
-    for n_neighbors in range(1, 100, 2):
+    for n_neighbors in n_neighbors_range:
         compares = {}  # Mapping schema: {column1: {gt: int}, ...}
         total_sq_error = 0
         total_count = 0
@@ -151,7 +152,9 @@ def find_best_RF(
     solid_df: pd.DataFrame,
     very_solid_df: pd.DataFrame,
     result_holder: ColumnGridSearchResults,
-    column_name: str
+    column_name: str,
+    max_depth_range: range = range(1, 20, 2),
+    n_estimators_range: range = range(1, 20, 2)
 ):
     """Perform grid-search to find the optimal Random Forest hyperparameters, and impute the column.
     Args:
@@ -161,10 +164,12 @@ def find_best_RF(
         very_solid_df (pd.DataFrame): The very solid (very low sparsity) dataframe
         result_holder (ColumnGridSearchResults): The object to store the results
         column_name (str): The name of the column to impute
+        max_depth_range (range): The range of max_depth to search over
+        n_estimators_range (range): The range of n_estimators to search over
     Returns:
         IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
     """
-    my_print_header("Performing RF grid search to find the optimal max_depth and n_estimators for RF Imputer.")
+    my_print_header(f"Performing RF grid search to optimize max_depth over {max_depth_range} and n_estimators {n_estimators_range}.")
     
     # TODO: for col in tqdm(df.columns):
     temp_df = very_solid_df.copy(deep=True)
@@ -176,13 +181,15 @@ def find_best_RF(
     best_rmse = float("inf")
     best_max_depth = 0
     best_n = 0
-    for max_depth in range(1, 20, 2):
-        for n_estimators in range(1, 20, 2):
+    for max_depth in max_depth_range:
+        for n_estimators in n_estimators_range:
             kf = KFold(n_splits=5, shuffle=True, random_state=max_depth*1000+n_estimators)
             compares = {} # Mapping schema: {column1: {gt: int}, ...}
             total_sq_error = 0
             total_count = 0
-            RF = IterativeImputer(estimator=RandomForestRegressor(max_depth=5,n_estimators=10))
+            RF = IterativeImputer(estimator=RandomForestRegressor(
+                max_depth=max_depth,
+                n_estimators=n_estimators))
             for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
                 try:
                     # Temporarily set cells to nan, and impute
@@ -218,7 +225,13 @@ def find_best_RF(
     # return compares
 
 
-def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
+def impute_column(
+    df: pd.DataFrame,
+    df_metadata: pd.DataFrame,
+    solid_df: pd.DataFrame,
+    very_solid_df: pd.DataFrame,
+    column_name: str,
+    debug_mode: bool = False):
     """Compare the optimal KNN and RF imputer for this column, and use the best one to impute the column.
 
     Args:
@@ -227,7 +240,7 @@ def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
         solid_df (_type_): _description_
         very_solid_df (_type_): _description_
         column_name (_type_): _description_
-
+        debug_mode (_type_): _description_
     Returns:
         _type_: _description_
     """
@@ -236,7 +249,34 @@ def impute_column(df, df_metadata, solid_df, very_solid_df, column_name):
     result_holder = ColumnGridSearchResults(column_name)
     
     # impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
-    find_best_KNN(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
+    if debug_mode:
+        KNN_n_neighbors_range = range(1, 10, 2)
+        RF_n_estimators_range = range(1, 5, 2)
+        RF_max_depth_range = range(1, 5, 2)
+    else:
+        KNN_n_neighbors_range = range(1, 100, 2)
+        RF_n_estimators_range = range(1, 20, 2)
+        RF_max_depth_range = range(1, 20, 2)
+        
+    find_best_KNN(
+        df,
+        df_metadata,
+        solid_df, 
+        very_solid_df,
+        result_holder,
+        column_name,
+        n_neighbors_range=KNN_n_neighbors_range
+        )
+    find_best_RF(
+        df,
+        df_metadata,
+        solid_df,
+        very_solid_df,
+        result_holder,
+        column_name,
+        max_depth_range=RF_max_depth_range,
+        n_estimators_range=RF_n_estimators_range
+        )
     
     return df, result_holder
 
