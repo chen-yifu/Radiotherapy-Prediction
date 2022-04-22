@@ -64,7 +64,14 @@ def preprocess(debug_mode=False):
     # df_RF = impute_missing.impute_missing_RF(df, df_metadata, solid_df, very_solid_df)
     # df_KNN = impute_column.impute_missing_KNN(df, df_metadata, solid_df, very_solid_df)
     result_holders = []
-    df_preprocessed, result_holder = impute_column.impute_column(df, df_metadata, solid_df, very_solid_df, "PRE_img_size")
+    df_preprocessed, result_holder = impute_column.impute_column(
+        df,
+        df_metadata,
+        solid_df,
+        very_solid_df,
+        "PRE_img_size",
+        debug_mode=debug_mode
+        )
     result_holders.append(result_holder)
     save_experiment_df(df_preprocessed, "AllTranTrainVal-preprocessed.csv", "preprocessed csv file")
     save_experiment_pickle(result_holders, "GridSearchResults.pkl", "KNN and RF imputation hyperparamter search")
