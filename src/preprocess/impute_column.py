@@ -1,3 +1,4 @@
+from typing import Tuple
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import IterativeImputer
@@ -207,7 +208,8 @@ def find_best_RF(
                 except ValueError as e:
                     # TODO solve try-except block about length mismatch 44/45
                     my_print(f"Skipped split {i}", plain=True)
-                    continue
+                    # continue
+                    raise e
             
             rmse = round((total_sq_error/total_count) ** 0.5, 5)
             if rmse < best_rmse:
@@ -231,24 +233,26 @@ def impute_column(
     solid_df: pd.DataFrame,
     very_solid_df: pd.DataFrame,
     column_name: str,
-    debug_mode: bool = False):
-    """Compare the optimal KNN and RF imputer for this column, and use the best one to impute the column.
+    debug_mode: bool = False
+        ) -> Tuple[pd.DataFrame, ColumnGridSearchResults]:
+    """Optimize KNN and RF Imputers, and use the best model to impute the column.
 
     Args:
-        df (_type_): _description_
-        df_metadata (_type_): _description_
-        solid_df (_type_): _description_
-        very_solid_df (_type_): _description_
-        column_name (_type_): _description_
-        debug_mode (_type_): _description_
+        df (pd.DataFrame): original DataFrame containing missing values
+        df_metadata (pd.DataFrame): metadata DataFrame
+        solid_df (pd.DataFrame): original DataFrame w/ solid columns only
+        very_solid_df (pd.DataFrame): original DataFrame w/ very solid columns
+        column_name (str): the column to impute
+        debug_mode (bool, optional): Whether run in debug mode to save time.
+
     Returns:
-        _type_: _description_
+        Tuple[pd.DataFrame, ColumnGridSearchResults]: Imputed DataFrame and
+            results of grid search
     """
-    my_print_header(f"Performing RF and KNN grid searches to find the best imputer for {column_name}...")
-    
+    my_print_header(f"Optimizing for the best imputer for {column_name}...")
+
     result_holder = ColumnGridSearchResults(column_name)
-    
-    # impute_missing_RF(df, df_metadata, solid_df, very_solid_df, result_holder, column_name)
+
     if debug_mode:
         KNN_n_neighbors_range = range(1, 10, 2)
         RF_n_estimators_range = range(1, 5, 2)
@@ -257,11 +261,11 @@ def impute_column(
         KNN_n_neighbors_range = range(1, 100, 2)
         RF_n_estimators_range = range(1, 20, 2)
         RF_max_depth_range = range(1, 20, 2)
-        
+
     find_best_KNN(
         df,
         df_metadata,
-        solid_df, 
+        solid_df,
         very_solid_df,
         result_holder,
         column_name,
@@ -277,6 +281,5 @@ def impute_column(
         max_depth_range=RF_max_depth_range,
         n_estimators_range=RF_n_estimators_range
         )
-    
-    return df, result_holder
 
+    return df, result_holder
