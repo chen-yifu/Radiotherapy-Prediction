@@ -21,7 +21,7 @@ class ColumnGridSearchResults:
     Also provides functions to get the best model, and the best hyperparameters
 
     Metric mapping schema:
-    {column1:
+    {KNN_metrics:
         {hyperparameter_setting1:
             {error: float,
             accuracy: float,
@@ -35,12 +35,12 @@ class ColumnGridSearchResults:
         ...
         }
     },
-    {column 2: ...}"""
+    {RF_metrics: ...}"""
     def __init__(self, column_name):
-
         self.column_name = column_name
-        self.KNN_metrics = defaultdict(lambda: defaultdict(float))
-        self.RF_metrics = defaultdict(lambda: defaultdict(float))
+        self.metrics = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(float))
+            )
 
     def get_best_model(self, metric_name):
         "Returns the best model and the best hyperparameters for this model"
@@ -50,6 +50,14 @@ class ColumnGridSearchResults:
         elif metric_name == "F1":
             # TODO implement get best model by F1
             pass
+
+    def save_best_model(self, metric_name):
+        # TODO
+        pass
+
+    def load_best_model(self, metric_name):
+        # TODO
+        pass
 
 
 def impute(imputer, df: pd.DataFrame):
@@ -91,7 +99,7 @@ def find_best_KNN(
         KNNImputer: the optimal KNN imputer
     """
 
-    my_print_header(f"Performing KNN grid search to optimize n_neighbors over {n_neighbors_range}.")
+    my_print_header(f"KNN: search best n_neighbors over {n_neighbors_range}.")
 
     # TODO: Standardize the numeric columns of DataFrame
     # TODO: for the categorical ones create separate columns for each category (use one-hot/standard function)
@@ -121,7 +129,8 @@ def find_best_KNN(
                 total_sq_error += (cur_imp - cur_gt)**2
                 total_count += 1
                 temp_df.loc[i, column_name] = cur_gt  # Restore ground truth
-                compares[(i, column_name)] = [cur_gt, cur_imp]
+                compares[(i, column_name)] = {"g truth": cur_gt,
+                                              "imputed": cur_imp}
             except ValueError:
                 # TODO solve try-except block about length mismatch 44/45
                 my_print(f"Skipped row {i} due to an error.")
@@ -134,7 +143,7 @@ def find_best_KNN(
             best_rmse = rmse
             compares = compares
         hyperparameter = frozenset({"n_neighbors": n_neighbors})
-        result_holder.KNN_metrics[hyperparameter] = {
+        result_holder.metrics["K Nearest Neighbors"][hyperparameter] = {
             "rmse": rmse,
             "compares": compares
             }
@@ -143,7 +152,7 @@ def find_best_KNN(
                 f"| Best n_neighbors = {best_n}. Best RMSE = {best_rmse}",
                 plain=True
                 )
-    my_print(f"KNN: Best n_neighbors = {best_n}. Best RMSE = {best_rmse}")
+    my_print(f"KNN: Best n_neighbors = {best_n}")
     return KNNImputer(n_neighbors=best_n)
 
 
@@ -157,35 +166,39 @@ def find_best_RF(
     max_depth_range: range = range(1, 20, 2),
     n_estimators_range: range = range(1, 20, 2)
 ):
-    """Perform grid-search to find the optimal Random Forest hyperparameters, and impute the column.
+    """Search the optimal Random Forest hyperparameters, and impute the column.
     Args:
         df (pd.DataFrame): The dataframe to impute
         df_metadata (pd.DataFrame): The metadata of the dataframe
         solid_df (pd.DataFrame): The solid (low sparsity) dataframe
-        very_solid_df (pd.DataFrame): The very solid (very low sparsity) dataframe
-        result_holder (ColumnGridSearchResults): The object to store the results
+        very_solid_df (pd.DataFrame): The very solid dataframe
+        result_holder (ColumnGridSearchResults): The object with results
         column_name (str): The name of the column to impute
         max_depth_range (range): The range of max_depth to search over
         n_estimators_range (range): The range of n_estimators to search over
     Returns:
         IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
     """
-    my_print_header(f"Performing RF grid search to optimize max_depth over {max_depth_range} and n_estimators {n_estimators_range}.")
-    
+    my_print_header(f"RF: search best max_depth over {max_depth_range}"
+                    f", and n_estimators {n_estimators_range}.")
+
     # TODO: for col in tqdm(df.columns):
     temp_df = very_solid_df.copy(deep=True)
     temp_df = temp_df.drop("PRE_record_id", axis=1)
     if column_name not in temp_df.columns:
         temp_df[column_name] = df[column_name]
-    # temp_df = temp_df[temp_df[col].notna()] # Drop rows with nan in column # TODO ennsure nans are dropped
+    # temp_df = temp_df[temp_df[col].notna()] # Drop rows with nan in column
+    # # TODO ennsure nans are dropped
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_max_depth = 0
     best_n = 0
     for max_depth in max_depth_range:
         for n_estimators in n_estimators_range:
-            kf = KFold(n_splits=5, shuffle=True, random_state=max_depth*1000+n_estimators)
-            compares = {} # Mapping schema: {column1: {gt: int}, ...}
+            kf = KFold(
+                n_splits=5,
+                shuffle=True)
+            compares = {}  # Mapping schema: {column1: {gt: int}, ...}
             total_sq_error = 0
             total_count = 0
             RF = IterativeImputer(estimator=RandomForestRegressor(
@@ -199,32 +212,48 @@ def find_best_RF(
                     imp_df = impute(RF, temp_df)
                     cur_imp = imp_df.loc[test_index, column_name]
                     for temp_gt, temp_imp in zip(cur_gt, cur_imp):
-                        if str(temp_gt) == "nan": continue
+                        if str(temp_gt) == "nan":
+                            continue
                         total_sq_error += (temp_gt - temp_imp)**2
                         total_count += 1
-                        temp_df.loc[test_index, column_name] = cur_gt # Restore ground truth of this cell
+                    # Restore ground truth of this column's fold
+                    temp_df.loc[test_index, column_name] = cur_gt
                     for idx in test_index:
-                        compares[(idx, column_name)] = [cur_gt, cur_imp]
+                        compares[(idx, column_name)] = {"g truth": cur_gt,
+                                                        "imputed": cur_imp}
                 except ValueError as e:
-                    # TODO solve try-except block about length mismatch 44/45
-                    my_print(f"Skipped split {i}", plain=True)
-                    # continue
                     raise e
-            
+
             rmse = round((total_sq_error/total_count) ** 0.5, 5)
             if rmse < best_rmse:
                 best_n = n_estimators
                 best_max_depth = max_depth
                 best_rmse = rmse
-                compares  = compares
+                compares = compares
             my_print(
-                f"n_estimators = {n_estimators}, max_depth = {max_depth}. RMSE = {rmse} |"
-                f"Best n_estimators = {best_n}, max_depth = {best_max_depth}. Best RMSE = {best_rmse}",
+                f"n_estimators = {n_estimators}, max_depth = {max_depth}."
+                f"RMSE = {rmse} |"
+                f"Best n_estimators = {best_n}, max_depth = {best_max_depth}."
+                f"Best RMSE = {best_rmse}",
                 plain=True
             )
-            hyperparameter = frozenset({"n_estimators": n_estimators, "max_depth": max_depth})
-            result_holder.RF_metrics[hyperparameter] = {"rmse": rmse, "compares": compares}
-    # return compares
+            hyperparameter = frozenset({
+                "n_estimators": n_estimators,
+                "max_depth": max_depth
+                })
+            result_holder.metrics["Random Forest"][hyperparameter] = {
+                "rmse": rmse,
+                "compares": compares
+                }
+
+    my_print(f"Best RF: n_estimators = {best_n}, max_depth = {best_max_depth}")
+
+    best_imputer = IterativeImputer(
+            estimator=RandomForestRegressor(
+                max_depth=best_max_depth,
+                n_estimators=best_n))
+
+    return best_imputer
 
 
 def impute_column(
@@ -258,9 +287,9 @@ def impute_column(
         RF_n_estimators_range = range(1, 5, 2)
         RF_max_depth_range = range(1, 5, 2)
     else:
-        KNN_n_neighbors_range = range(1, 100, 2)
-        RF_n_estimators_range = range(1, 20, 2)
-        RF_max_depth_range = range(1, 20, 2)
+        KNN_n_neighbors_range = range(1, 100, 5)
+        RF_n_estimators_range = range(10, 211, 40)  # range(1, 15, 3)
+        RF_max_depth_range = range(1, 15, 3)  # range(1, 15, 3)
 
     find_best_KNN(
         df,
