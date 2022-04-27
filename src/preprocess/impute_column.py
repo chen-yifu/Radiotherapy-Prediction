@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Dict, Tuple, Union
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import IterativeImputer
@@ -21,26 +21,86 @@ class ColumnGridSearchResults:
     Also provides functions to get the best model, and the best hyperparameters
 
     Metric mapping schema:
-    {KNN_metrics:
+    {KNN:
         {hyperparameter_setting1:
-            {error: float,
-            accuracy: float,
-            F1: float,
-            compares: [(ground truth, imputed), (ground truth, imputed), ...]},
+            {
+                rmse: float,
+                accuracy: float,
+                F1: float,
+                compares: [(g truth, imputed), (g truth, imputed), ...]
+            },
         hyperparameter_setting2:
-            {error: float,
-            accuracy: float,
-            F1:float,
-            compares: [(ground truth, imputed), (ground truth, imputed), ...]},
+            {
+                rmse: float,
+                accuracy: float,
+                F1:float,
+                compares: [(g truth, imputed), (g truth, imputed), ...]
+            },
         ...
         }
     },
-    {RF_metrics: ...}"""
+    {RF: ...}"""
     def __init__(self, column_name):
         self.column_name = column_name
         self.metrics = defaultdict(
             lambda: defaultdict(lambda: defaultdict(float))
             )
+
+    def add_compare(
+        self,
+        model_name: str,
+        hyperparameter_setting: frozenset,
+        gtruth: Union[str, float, int],
+        imputed: Union[str, float, int]
+    ) -> None:
+        """Add the (ground truth, imputed) tuple to the compares field
+
+        Args:
+            model_name (str): name of model, e.g., RF or KNN
+            hyperparameter_setting (frozenset): hyperparameter setting
+            gtruth (Union[str, float, int]): original value in DataFrame
+            imputed (Union[str, float, int]): imputed value by model
+        """
+        tupl = (gtruth, imputed)
+        holder = self.metrics[model_name][hyperparameter_setting]
+        compares = holder["compares"]
+        if not compares or type(compares) == float:
+            holder["compares"] = [tupl]
+        else:
+            holder["compares"].append(tupl)
+
+    def calc_metrics(
+        self,
+        model_name: str,
+        hyperparameter_setting: frozenset,
+        metric: str
+    ) -> None:
+        """Calculate the metrics for a given model and hyperparameter setting
+
+        Args:
+            model_name (str): name of model, e.g., RF or KNN
+            hyperparameter_setting (frozenset): hyperparameter setting
+            metric (str): RMSE, F1, ACCURACY
+        """
+        holder = self.metrics[model_name][hyperparameter_setting]
+        compares = holder["compares"]
+
+        # Calculate RMSE of the imputation
+        # TODO implement metric calculation for accuracy, F1, rmse
+        if metric == "RMSE":
+            total_sq_error, total_count = 0, 0
+            for gt, imp in compares:
+                total_sq_error += (gt - imp) ** 2
+                total_count += 1
+            rmse = (total_sq_error/total_count) ** 0.5
+            holder["rmse"] = rmse
+            return rmse
+        elif metric == "ACCURACY":
+            # TODO
+            pass
+        elif metric == "F1":
+            # TODO
+            pass
 
     def get_best_model(self, metric_name):
         "Returns the best model and the best hyperparameters for this model"
@@ -50,12 +110,14 @@ class ColumnGridSearchResults:
         elif metric_name == "F1":
             # TODO implement get best model by F1
             pass
+        elif metric_name == "rmse":
+            pass
 
-    def save_best_model(self, metric_name):
+    def save_best_models(self):
         # TODO
         pass
 
-    def load_best_model(self, metric_name):
+    def load_best_models(self) -> Dict:
         # TODO
         pass
 
@@ -117,6 +179,7 @@ def find_best_KNN(
         total_sq_error = 0
         total_count = 0
         KNN = KNNImputer(n_neighbors=n_neighbors)
+        hyperparameter = frozenset({"n_neighbors": n_neighbors})
         for i in range(0, len(df)):
             try:
                 # Temporarily set a cell to nan, and impute
@@ -126,27 +189,33 @@ def find_best_KNN(
                 temp_df.loc[i, column_name] = np.nan
                 imp_df = impute(KNN, temp_df)
                 cur_imp = imp_df.loc[i, column_name]
-                total_sq_error += (cur_imp - cur_gt)**2
-                total_count += 1
+                # total_sq_error += (cur_imp - cur_gt)**2
+                # total_count += 1
                 temp_df.loc[i, column_name] = cur_gt  # Restore ground truth
-                compares[(i, column_name)] = {"g truth": cur_gt,
-                                              "imputed": cur_imp}
+                # compares[(i, column_name)] = {"g truth": cur_gt,
+                #                               "imputed": cur_imp}
+                result_holder.add_compare(
+                    "KNN",
+                    hyperparameter,
+                    cur_gt,
+                    cur_imp
+                    )
             except ValueError:
                 # TODO solve try-except block about length mismatch 44/45
                 my_print(f"Skipped row {i} due to an error.")
                 continue
 
-        rmse = (total_sq_error/total_count) ** 0.5
-        rmse = round(rmse, 5)
+        # rmse = (total_sq_error/total_count) ** 0.5
+        # rmse = round(rmse, 5)
+        rmse = result_holder.calc_metrics("KNN", hyperparameter, "RMSE")
         if rmse < best_rmse:
             best_n = n_neighbors
             best_rmse = rmse
-            compares = compares
-        hyperparameter = frozenset({"n_neighbors": n_neighbors})
-        result_holder.metrics["K Nearest Neighbors"][hyperparameter] = {
-            "rmse": rmse,
-            "compares": compares
-            }
+
+        # result_holder.metrics["KNN"][hyperparameter] = {
+        #     "rmse": rmse,
+        #     "compares": compares
+        #     }
         my_print(
                 f"n_neighbors = {n_neighbors}. RMSE = {rmse} "
                 f"| Best n_neighbors = {best_n}. Best RMSE = {best_rmse}",
@@ -241,8 +310,8 @@ def find_best_RF(
                 "n_estimators": n_estimators,
                 "max_depth": max_depth
                 })
-            result_holder.metrics["Random Forest"][hyperparameter] = {
-                "rmse": rmse,
+            result_holder.metrics["RF"][hyperparameter] = {
+                "best_rmse": rmse,
                 "compares": compares
                 }
 
@@ -291,7 +360,7 @@ def impute_column(
         RF_n_estimators_range = range(10, 211, 40)  # range(1, 15, 3)
         RF_max_depth_range = range(1, 15, 3)  # range(1, 15, 3)
 
-    find_best_KNN(
+    best_KNN = find_best_KNN(
         df,
         df_metadata,
         solid_df,
@@ -300,7 +369,7 @@ def impute_column(
         column_name,
         n_neighbors_range=KNN_n_neighbors_range
         )
-    find_best_RF(
+    best_FN = find_best_RF(
         df,
         df_metadata,
         solid_df,
@@ -310,5 +379,8 @@ def impute_column(
         max_depth_range=RF_max_depth_range,
         n_estimators_range=RF_n_estimators_range
         )
+
+    # Use the best model to impute this column
+    best_model = result_holder.get_best_model()
 
     return df, result_holder
