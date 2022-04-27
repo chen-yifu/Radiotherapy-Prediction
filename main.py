@@ -1,24 +1,24 @@
-import pandas as pd
-from sklearn.impute import *
-import numpy as np
-from collections import Counter
+import argparse
 from src.preprocess import preprocess
-from utils.setup import *
-from utils.io import *
+from utils.setup import setup
+from utils.io import my_print, my_print_header, initialize_experiment_folder
 
-# p = Printer()
 if __name__ == "__main__":
-    import argparse
+    # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--debug", action="store_true", help="enable fast debug mode")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="enable fast debug mode"
+        )
     args = parser.parse_args()
-    global debug_mode
     debug_mode = True if args.debug else False
-
+    mode = "debug mode" if debug_mode else "release mode"
+    # Initialize experiment folder and settings
     experiment_dir = initialize_experiment_folder()
-    my_print(f"Running experiments in {'fast-debug mode' if debug_mode else 'release mode'}...")
     setup()
-    
+    # Run preprocessing: feature engineering, cleaning, imputation
+    my_print(f"Running in {mode}...")
     preprocess.preprocess(debug_mode=debug_mode)
-    
-    my_print_header(f"Experiment done running in {'fast-debug mode' if debug_mode else 'release mode'}!")
+    my_print_header(f"Done running experiments in {mode}.")
+    my_print(f"Experiment results saved to: {experiment_dir}")

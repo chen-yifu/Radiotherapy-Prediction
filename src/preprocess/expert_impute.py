@@ -1,5 +1,4 @@
-import numpy as np
-from utils.io import *
+from utils.io import my_print_header, my_print
 from tqdm import tqdm
 
 
@@ -8,7 +7,9 @@ def expert_impute(df, metadata_df):
     imputed_locs = {}
     global row, val, orig_val
     for col in tqdm(metadata_df["Field"]):
-        script = metadata_df.loc[metadata_df["Field"] == col]["Imputation_Script_if_Missing"].values[0]
+        script = metadata_df.loc[
+            metadata_df["Field"] == col
+            ]["Imputation_Script_if_Missing"].values[0]
         for i, row in df.iterrows():
             if str(script) == "nan":
                 continue
@@ -19,6 +20,9 @@ def expert_impute(df, metadata_df):
             if str(orig_val) != "nan" and orig_val != val:
                 df.loc[i, col] = val
                 imputed_locs[(i, col)] = (orig_val, val)
-    my_print(
-        f"✅ Expert Imputation - Used expert manual rules to impute missing values in some columns. {len(imputed_locs)} cells were filled.", plain=True)
+    my_print("✅ Expert Imputation - Used expert manual rules to"
+             "impute missing values in some columns."
+             f"{len(imputed_locs)} cells were filled.",
+             plain=True)
+
     return imputed_locs

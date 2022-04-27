@@ -1,10 +1,9 @@
-from utils.io import *
+from utils.io import my_print
 import pandas as pd
-from tqdm import tqdm
 
 
 def get_solid_df(df, df_metadata, sparsity_threshold):
-    # If more than sparsity_threshold of cells are missing, then remove the column
+    # keep columns with lower than than sparsity_threshold missingness
     columns = sorted(df.columns, key=lambda x: df[x].isna().sum())
     # Remove sparse columns
     for col in df.columns:
@@ -15,14 +14,13 @@ def get_solid_df(df, df_metadata, sparsity_threshold):
             col_group = df_metadata.loc[df_metadata["Field"] == col]["Group"]
             if len(col_group) and col_group.item() != "PRE":
                 columns.remove(col)
-            
+
     my_print(
         f"{len(columns)} out of {len(df.columns)} all columns are PRE"
-        f"and have ≤ {sparsity_threshold} missing cells.", 
+        f"and have ≤ {sparsity_threshold} missing cells.",
         plain=True
         )
-    
+
     result_df = pd.DataFrame(df[columns])
     return result_df
-
 
