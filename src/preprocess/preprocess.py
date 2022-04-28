@@ -1,8 +1,9 @@
+import pickle
 from src.preprocess import expert_impute, impute_column, rename_columns, time_to_numeric
 from src.preprocess.cleanse_dataset import cleanse_dataset
 from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
-from utils.get_timestamp import *
+from utils.get_timestamp import get_timestamp
 from utils.io import my_print_header, save_experiment_df, save_experiment_pickle
 from src.preprocess import *
 from sklearn.impute import *
@@ -19,12 +20,12 @@ metadata_path = "data/metadata/Metadata.xlsx"
 # out_RF_path = "data/preprocessed/AllTranTrainVal-RFImputed.csv"
 
 # Max percentage of missing cells for a column to be considered very_solid
-very_solid_threshold = 0.05
+very_solid_threshold = 0.0
 # Max percentage of missing cells for a column to be considered solid
 solid_threshold = 0.20
 
 
-def preprocess(debug_mode: bool = False) -> None:
+def preprocess(debug_mode: bool, experiment_dir: str) -> None:
     """
     Preprocess the dataset through:
         - renaming variables
@@ -32,8 +33,10 @@ def preprocess(debug_mode: bool = False) -> None:
         - applying expert pre-processing rules
         - filling in missing values through imputation
     Args:
-        debug_mode (bool, optional): Whether run in debug mode to save time.
+        debug_mode (bool): Whether run in debug mode to save time.
+        experiment_dir (str): Path to experiment folder.
     """
+
     # Read Dataset
     df_metadata = pd.read_excel(metadata_path, sheet_name="Sheet1")
     df = pd.read_csv(df_path)
@@ -70,26 +73,39 @@ def preprocess(debug_mode: bool = False) -> None:
         sparsity_threshold=very_solid_threshold
         )
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
-    result_holders = []
-    df_preprocessed, result_holder = impute_column.impute_column(
-        df,
-        df_metadata,
-        solid_df,
-        very_solid_df,
-        "PRE_img_size",
-        debug_mode=debug_mode
-        )
-    result_holders.append(result_holder)
+    result_holders = {}
+    col_iter = [c for c in df.columns[1:] if c not in very_solid_df.columns]
+    if debug_mode:
+        col_iter = col_iter[:3]
 
-    save_experiment_df(
-        df_preprocessed,
-        "AllTranTrainVal-preprocessed.csv",
-        "preprocessed csv file"
-        )
+    my_print_header("Imputing columns:", ", ".join(col_iter))
+    for column in col_iter:
+        try:
+            my_print_header("Imputing column:", column)
+            df_preprocessed, result_holder = impute_column.impute_column(
+                df,
+                df_metadata,
+                solid_df,
+                very_solid_df,
+                column,
+                "rmse",
+                debug_mode=debug_mode
+                )
+            result_holders[column] = result_holder
+        except Exception as e:
+            print(f"Skipped {column} due to error: {e}")
+            continue
+
+    # TODO implement df_preprocessed in impute_column
+    # save_experiment_df(
+    #     df_preprocessed,
+    #     "AllTranTrainVal-preprocessed.csv",
+    #     "preprocessed csv file"
+    #     )
 
     save_experiment_pickle(
         result_holders,
-        "GridSearchResults.pkl",
+        "AllColumnsGridSearchResultHolders.pkl",
         "KNN and RF imputation hyperparamter search"
         )
 

@@ -4,8 +4,9 @@ import os
 import dill as pickle
 import json
 import pandas as pd
+import utils.config as config
 
-out_dir = "data/preprocessed"
+out_dir = f"data/experiments/"
 
 
 # LOADER FUNCTIONS #
@@ -18,24 +19,26 @@ def load_col_type(path):
 # SAVER FUNCTIONS #
 def initialize_experiment_folder():
     # Make a folder for saving the experiment data
-    global cur_timestamp
     cur_timestamp = get_timestamp()
-    experiment_path = os.path.join(out_dir, cur_timestamp)
-    os.mkdir(experiment_path)
-    my_print("Created experiment folder:", experiment_path)
-    return experiment_path
+    experiment_dir = os.path.join(out_dir, cur_timestamp)
+    os.mkdir(experiment_dir)
+    config.experiment_dir = experiment_dir
+    my_print("Created experiment folder:", experiment_dir)
+    return experiment_dir
 
 
 def save_experiment_df(df: pd.DataFrame, file_name: str, description: str):
     # Save the dataframe to experiment folder
-    file_path = os.path.join(out_dir, cur_timestamp, file_name)
+    experiment_dir = config.experiment_dir
+    file_path = os.path.join(experiment_dir, file_name)
     df.to_csv(file_path, index=False)
     my_print(f"Saved {description} DataFrame to: {file_path}.")
     return file_path
 
 
 def save_experiment_pickle(object, file_name: str, description: str):
-    file_path = os.path.join(out_dir, cur_timestamp, file_name)
+    experiment_dir = config.experiment_dir
+    file_path = os.path.join(experiment_dir, file_name)
     with open(file_path, 'wb') as f:
         pickle.dump(object, f)
     my_print(f"Saved {description} Object to: {file_path}.")
@@ -43,7 +46,8 @@ def save_experiment_pickle(object, file_name: str, description: str):
 
 
 def add_to_log(content):
-    log_path = os.path.join(out_dir, cur_timestamp, "log.txt")
+    experiment_dir = config.experiment_dir
+    log_path = os.path.join(experiment_dir, "log.txt")
     if not os.path.exists(log_path):
         content = f"Use this command to view log file:\ncat {log_path}\n" \
             + content
