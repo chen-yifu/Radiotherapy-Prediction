@@ -6,12 +6,8 @@ from src.preprocess.get_solid_df import get_solid_df
 from utils.get_timestamp import get_timestamp
 from utils.io import my_print_header, save_experiment_df, save_experiment_pickle
 from src.preprocess import *
-from sklearn.impute import *
-from collections import Counter
+# from sklearn.impute import *
 import pandas as pd
-import numpy as np
-import json
-import os
 
 col_type_path = "data/metadata/col_types.json"
 df_path = "data/AllTranTrainVal.csv"
@@ -47,8 +43,11 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
     # TODO Feature Engineering - consolidate and engineer new features
     engineer_features.engineer_features(df, df_metadata)
 
+    # Shuffle the rows in DataFrame
+    df = df.sample(frac=1).reset_index(drop=True)
+
     if debug_mode:
-        df = df.iloc[:10, :]
+        df = df.iloc[:20, :]
     else:
         # Dataset Cleansing - remove noisy values such as "n/a"
         cleansed_locs = cleanse_dataset.cleanse_dataset(df, df_metadata)
@@ -59,6 +58,7 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
 
     # Convert Time columns into Numeric columns
     df = time_to_numeric.time_to_numeric(df, df_metadata)
+
 
     # Get Solid DataFrame - remove columns that are too sparse
     my_print_header("Using solid PRE columns to impute the other columns.")
@@ -74,14 +74,23 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
         )
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
     result_holders = {}
-    col_iter = [c for c in df.columns[1:] if c not in very_solid_df.columns]
+    # col_iter = [c for c in df.columns[1:] if c not in very_solid_df.columns]
+    col_iter = df.columns[1:]
     if debug_mode:
-        col_iter = col_iter[:4]
+        col_iter = col_iter[:20]
 
     my_print_header("Imputing columns:", ", ".join(col_iter))
     for column in col_iter:
+        missingness = df[column].isna().sum() / len(df)
+        my_print_header(f"Imputing column {column} with {missingness} missing")
+        # Impute a column if and only if it has at least one missing value
+        if missingness == 0:
+            print(f"{column} has no missing values.")
+            continue
+        elif missingness == 1:
+            print(f"{column} has no non-missing values.")
+            continue
         try:
-            my_print_header("Imputing column:", column)
             df_preprocessed, result_holder = impute_column.impute_column(
                 df,
                 df_metadata,
@@ -94,7 +103,11 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
             result_holders[column] = result_holder
         except Exception as e:
             print(f"Skipped {column} due to error: {e}")
-            continue
+            if debug_mode:
+                raise e
+            else:
+    
+                continue
 
     # TODO implement df_preprocessed in impute_column
     # save_experiment_df(
