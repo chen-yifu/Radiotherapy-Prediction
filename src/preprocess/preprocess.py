@@ -5,6 +5,7 @@ from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
 from utils.get_timestamp import get_timestamp
 from utils.io import my_print_header, save_experiment_df, save_experiment_pickle
+import utils.config as config
 from src.preprocess import *
 # from sklearn.impute import *
 import pandas as pd
@@ -21,7 +22,7 @@ very_solid_threshold = 0.05
 solid_threshold = 0.20
 
 
-def preprocess(debug_mode: bool, experiment_dir: str) -> None:
+def preprocess(experiment_dir: str) -> None:
     """
     Preprocess the dataset through:
         - renaming variables
@@ -29,10 +30,9 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
         - applying expert pre-processing rules
         - filling in missing values through imputation
     Args:
-        debug_mode (bool): Whether run in debug mode to save time.
         experiment_dir (str): Path to experiment folder.
     """
-
+    debug_mode = config.debug_mode
     # Read Dataset
     df_metadata = pd.read_excel(metadata_path, sheet_name="Sheet1")
     df = pd.read_csv(df_path)
@@ -44,7 +44,7 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
     engineer_features.engineer_features(df, df_metadata)
 
     # Shuffle the rows in DataFrame
-    df = df.sample(frac=1).reset_index(drop=True)
+    df = df.sample(frac=1, random_state=0).reset_index(drop=True)
 
     if debug_mode:
         df = df.iloc[:20, :]
@@ -97,8 +97,7 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
                 solid_df,
                 very_solid_df,
                 column,
-                "rmse",
-                debug_mode=debug_mode
+                "rmse"
                 )
             result_holders[column] = result_holder
         except Exception as e:
@@ -106,7 +105,6 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
             if debug_mode:
                 raise e
             else:
-    
                 continue
 
     # TODO implement df_preprocessed in impute_column

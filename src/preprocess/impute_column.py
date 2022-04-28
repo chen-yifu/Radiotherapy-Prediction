@@ -70,6 +70,8 @@ class ColumnGridSearchResults:
             imputed (Union[str, float, int]): imputed value by model
         """
         self.model_names.add(model_name)
+        if type(imputed) == float:
+            imputed = round(imputed, 4)
         tupl = (gtruth, imputed)
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
@@ -90,7 +92,7 @@ class ColumnGridSearchResults:
             hyperparameter_setting (tuple): hyperparameter setting
         """
         compares = self.metrics[model_name][hyperparameter_setting]["compares"]
-        my_print(f"Showing compares for {model_name} {hyperparameter_setting}")
+        my_print(f"Comparing gt-impute {model_name} {hyperparameter_setting}:")
         print(compares)
 
     def calc_metrics(
@@ -199,10 +201,13 @@ def impute(imputer, df: pd.DataFrame):
     Returns:
         pd.DataFrame: the imputed dataframe
     """
+    imputed_df = imputer.fit_transform(df)
+    # print("Shape of original df", df.shape)
+    # print("Shape of imputed df", imputed_df.shape)
     new_df = pd.DataFrame(
-        imputer.fit_transform(df),
-        columns=df.columns,
-        index=df.index
+        imputed_df,
+        columns=df.columns
+        # index=df.index
         )
     return new_df
 
@@ -351,6 +356,10 @@ def find_best_RF(
                     temp_df.loc[test_index, column_name] = np.nan
                     # print("DURING")  #, temp_df.isna().sum())
                     # print(temp_df)
+                    # If the entire column is nan, skip
+                    if temp_df[column_name].isna().sum() == len(temp_df):
+                        print(f"Skipping fold {i} due to all nan.")
+                        continue
                     imp_df = impute(RF, temp_df)
                     cur_imp = imp_df.loc[test_index, column_name]
                     # Restore ground truth
@@ -367,10 +376,10 @@ def find_best_RF(
                     # print("AFTER")  #, imp_df.isna().sum())
                     # print(imp_df)
                 except ValueError as e:
-                    print("ERROR", e)
-                    print(f"Skipped row {i} due to an error.")
+                    print(f"Skipped row {i} due to an error: {e}")
+                    if config.debug_mode:
+                        raise e
                     continue
-                    # raise e
 
             rmse = result_holder.calc_metrics("RF", hyperparameter, "rmse")
             if rmse < best_rmse:
@@ -402,8 +411,7 @@ def impute_column(
     solid_df: pd.DataFrame,
     very_solid_df: pd.DataFrame,
     column_name: str,
-    target_metric: str,
-    debug_mode: bool = False
+    target_metric: str
         ) -> Tuple[pd.DataFrame, ColumnGridSearchResults]:
     """Optimize KNN and RF Imputers, and use the best model to impute the column.
 
@@ -414,7 +422,6 @@ def impute_column(
         very_solid_df (pd.DataFrame): original DataFrame w/ very solid columns
         column_name (str): the column to impute
         target_metric (str): the metric to optimize (F1, accuracy, rmse)
-        debug_mode (bool, optional): Whether run in debug mode to save time.
 
     Returns:
         Tuple[pd.DataFrame, ColumnGridSearchResults]: Imputed DataFrame and
@@ -424,10 +431,10 @@ def impute_column(
 
     result_holder = ColumnGridSearchResults(column_name)
 
-    if debug_mode:
-        KNN_n_neighbors_range = range(1, 20, 3)
-        RF_n_estimators_range = range(1, 16, 5)
-        RF_max_depth_range = range(1, 5, 2)
+    if config.debug_mode:
+        KNN_n_neighbors_range = range(1, 5, 1)
+        RF_n_estimators_range = range(1, 3, 1)
+        RF_max_depth_range = range(1, 3, 1)
     else:
         KNN_n_neighbors_range = range(1, 50, 3)
         RF_n_estimators_range = range(10, 351, 40)  # range(1, 15, 3)

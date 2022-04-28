@@ -32,7 +32,7 @@ def save_experiment_df(df: pd.DataFrame, file_name: str, description: str):
     experiment_dir = config.experiment_dir
     file_path = os.path.join(experiment_dir, file_name)
     df.to_csv(file_path, index=False)
-    my_print(f"Saved {description} DataFrame to: {file_path}.")
+    my_print_header(f"Saved {description} DataFrame to: {file_path}.")
     return file_path
 
 
@@ -41,7 +41,7 @@ def save_experiment_pickle(object, file_name: str, description: str):
     file_path = os.path.join(experiment_dir, file_name)
     with open(file_path, 'wb') as f:
         pickle.dump(object, f)
-    my_print(f"Saved {description} Object to: {file_path}.")
+    my_print_header(f"Saved {description} Object to: {file_path}.")
     return file_path
 
 
