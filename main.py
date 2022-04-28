@@ -19,6 +19,6 @@ if __name__ == "__main__":
     setup()
     # Run preprocessing: feature engineering, cleaning, imputation
     my_print(f"Running in {mode}...")
-    preprocess.preprocess(debug_mode=debug_mode)
+    preprocess.preprocess(debug_mode=debug_mode, experiment_dir=experiment_dir)
     my_print_header(f"Done running experiments in {mode}.")
     my_print(f"Experiment results saved to: {experiment_dir}")
