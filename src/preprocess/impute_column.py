@@ -1,4 +1,4 @@
-from typing import Dict, OrderedDict, Tuple, Union
+from typing import Dict, List, OrderedDict, Tuple, Union
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import IterativeImputer
@@ -78,6 +78,21 @@ class ColumnGridSearchResults:
         else:
             holder["compares"].append(tupl)
 
+    def show_compare(
+        self,
+        model_name: str,
+        hyperparameter_setting: tuple
+    ) -> List[tuple]:
+        """Given a model name and hyperparameter setting, return the compares
+
+        Args:
+            model_name (str): name of model, e.g., RF or KNN
+            hyperparameter_setting (tuple): hyperparameter setting
+        """
+        compares = self.metrics[model_name][hyperparameter_setting]["compares"]
+        my_print(f"Showing compares for {model_name} {hyperparameter_setting}")
+        print(compares)
+
     def calc_metrics(
         self,
         model_name: str,
@@ -93,10 +108,12 @@ class ColumnGridSearchResults:
         """
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
+        if type(compares) == float:
+            print("No 'compares' to calculate metrics")
+            return -1
         # Calculate RMSE of the imputation
         # TODO implement metric calculation for accuracy, F1, rmse
         if metric == "rmse":
-            print("!"*100)
             total_sq_error, total_count = 0, 0
             for gt, imp in compares:
                 total_sq_error += (gt - imp) ** 2
@@ -112,7 +129,7 @@ class ColumnGridSearchResults:
             # TODO
             pass
 
-    def get_best_model(self, metric_name: str):
+    def get_best_model(self, metric_name: str) -> Tuple[object, str, tuple]:
         """"Returns the best model with the best hyperparameters for metric
 
         Args:
@@ -130,7 +147,7 @@ class ColumnGridSearchResults:
         path = self.metrics[name][hyper_dict]["model_pickle_path"]
         with open(path, "rb") as f:
             model = pickle.load(f)
-            return model
+            return model, name, hyper_dict
 
     def save_model(
         self,
@@ -211,7 +228,7 @@ def find_best_KNN(
         KNNImputer: the optimal KNN imputer
     """
 
-    my_print_header(f"KNN: search best n_neighbors over {n_neighbors_range}.")
+    my_print(f"KNN: search best n_neighbors over {n_neighbors_range}.")
 
     # TODO: for the categorical ones create separate columns for each category?
     #       (use one-hot/standard function)
@@ -295,7 +312,7 @@ def find_best_RF(
     Returns:
         IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
     """
-    my_print_header(f"RF: search best max_depth over {max_depth_range}"
+    my_print(f"RF: search best max_depth over {max_depth_range}"
                     f", and n_estimators {n_estimators_range}.")
 
     # TODO: for col in tqdm(df.columns):
@@ -323,18 +340,17 @@ def find_best_RF(
                 max_depth=max_depth,
                 n_estimators=n_estimators,
                 random_state=0))
-            my_print_header("IMPUTING", column_name)
             for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
-                print("BEFORE")  #, temp_df.isna().sum())
-                print(temp_df)
+                # print("BEFORE")  #, temp_df.isna().sum())
+                # print(temp_df)
                 try:
-                    # Temporarily set a cell to nan, and impute
+                    # Temporarily set cells in fold to nan, and impute
                     cur_gt = temp_df.loc[test_index, column_name]
                     if str(cur_gt) == "nan":
                         continue
                     temp_df.loc[test_index, column_name] = np.nan
-                    print("DURING")  #, temp_df.isna().sum())
-                    print(temp_df)
+                    # print("DURING")  #, temp_df.isna().sum())
+                    # print(temp_df)
                     imp_df = impute(RF, temp_df)
                     cur_imp = imp_df.loc[test_index, column_name]
                     # Restore ground truth
@@ -342,15 +358,14 @@ def find_best_RF(
                     for imp, gt in zip(cur_imp, cur_gt):
                         if str(gt) == "nan":
                             continue
-                        print(f"Added imp {imp}, gt {gt}")
                         result_holder.add_compare(
                             "RF",
                             hyperparameter,
                             gt,
                             imp
                             )
-                    print("AFTER")  #, imp_df.isna().sum())
-                    print(imp_df)
+                    # print("AFTER")  #, imp_df.isna().sum())
+                    # print(imp_df)
                 except ValueError as e:
                     print("ERROR", e)
                     print(f"Skipped row {i} due to an error.")
@@ -405,13 +420,13 @@ def impute_column(
         Tuple[pd.DataFrame, ColumnGridSearchResults]: Imputed DataFrame and
             results of grid search
     """
-    my_print_header(f"Optimizing for the best imputer for {column_name}...")
+    my_print(f"Optimizing for the best imputer for {column_name}...")
 
     result_holder = ColumnGridSearchResults(column_name)
 
     if debug_mode:
-        KNN_n_neighbors_range = range(1, 10, 2)
-        RF_n_estimators_range = range(1, 5, 2)
+        KNN_n_neighbors_range = range(1, 20, 3)
+        RF_n_estimators_range = range(1, 16, 5)
         RF_max_depth_range = range(1, 5, 2)
     else:
         KNN_n_neighbors_range = range(1, 50, 3)
@@ -438,7 +453,8 @@ def impute_column(
         )
 
     # Use the best model to impute this column
-    best_model = result_holder.get_best_model(target_metric)
-    print(f"The model with best {target_metric} on {column_name}:", best_model)
+    best_model, name, hyperparam = result_holder.get_best_model(target_metric)
+    my_print(f"The model with best {target_metric} is {name} {hyperparam}.")
+    result_holder.show_compare(name, hyperparam)
 
     return df, result_holder
