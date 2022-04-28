@@ -17,7 +17,8 @@ def get_solid_df(df, df_metadata, sparsity_threshold):
 
     my_print(
         f"{len(columns)} out of {len(df.columns)} all columns are PRE"
-        f"and have ≤ {sparsity_threshold} missing cells.",
+        f" and have ≤ {sparsity_threshold} missing cells."
+        f"\nThey are {columns}",
         plain=True
         )
 

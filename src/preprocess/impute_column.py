@@ -96,6 +96,7 @@ class ColumnGridSearchResults:
         # Calculate RMSE of the imputation
         # TODO implement metric calculation for accuracy, F1, rmse
         if metric == "rmse":
+            print("!"*100)
             total_sq_error, total_count = 0, 0
             for gt, imp in compares:
                 total_sq_error += (gt - imp) ** 2
@@ -255,8 +256,8 @@ def find_best_KNN(
             except Exception as e:
                 print("ERROR", e)
                 my_print(f"Skipped row {i} due to an error.")
-                continue
-                # raise e
+                # continue
+                raise e
         rmse = result_holder.calc_metrics("KNN", hyperparameter, "rmse")
         if rmse < best_rmse:
             best_n = n_neighbors
@@ -312,7 +313,8 @@ def find_best_RF(
         for n_estimators in n_estimators_range:
             kf = KFold(
                 n_splits=3,
-                shuffle=True)
+                shuffle=True,
+                random_state=0)
             hyperparameter = tuple(sorted({
                 "n_estimators": n_estimators,
                 "max_depth": max_depth
@@ -321,23 +323,34 @@ def find_best_RF(
                 max_depth=max_depth,
                 n_estimators=n_estimators,
                 random_state=0))
+            my_print_header("IMPUTING", column_name)
             for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
+                print("BEFORE")  #, temp_df.isna().sum())
+                print(temp_df)
                 try:
                     # Temporarily set a cell to nan, and impute
-                    cur_gt = temp_df.loc[i, column_name]
+                    cur_gt = temp_df.loc[test_index, column_name]
                     if str(cur_gt) == "nan":
                         continue
-                    temp_df.loc[i, column_name] = np.nan
+                    temp_df.loc[test_index, column_name] = np.nan
+                    print("DURING")  #, temp_df.isna().sum())
+                    print(temp_df)
                     imp_df = impute(RF, temp_df)
-                    cur_imp = imp_df.loc[i, column_name]
+                    cur_imp = imp_df.loc[test_index, column_name]
                     # Restore ground truth
-                    temp_df.loc[i, column_name] = cur_gt
-                    result_holder.add_compare(
-                        "RF",
-                        hyperparameter,
-                        cur_gt,
-                        cur_imp
-                        )
+                    temp_df.loc[test_index, column_name] = cur_gt
+                    for imp, gt in zip(cur_imp, cur_gt):
+                        if str(gt) == "nan":
+                            continue
+                        print(f"Added imp {imp}, gt {gt}")
+                        result_holder.add_compare(
+                            "RF",
+                            hyperparameter,
+                            gt,
+                            imp
+                            )
+                    print("AFTER")  #, imp_df.isna().sum())
+                    print(imp_df)
                 except ValueError as e:
                     print("ERROR", e)
                     print(f"Skipped row {i} due to an error.")
