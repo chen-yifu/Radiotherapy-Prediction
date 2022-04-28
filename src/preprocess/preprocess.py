@@ -20,7 +20,7 @@ metadata_path = "data/metadata/Metadata.xlsx"
 # out_RF_path = "data/preprocessed/AllTranTrainVal-RFImputed.csv"
 
 # Max percentage of missing cells for a column to be considered very_solid
-very_solid_threshold = 0.0
+very_solid_threshold = 0.05
 # Max percentage of missing cells for a column to be considered solid
 solid_threshold = 0.20
 
@@ -76,7 +76,7 @@ def preprocess(debug_mode: bool, experiment_dir: str) -> None:
     result_holders = {}
     col_iter = [c for c in df.columns[1:] if c not in very_solid_df.columns]
     if debug_mode:
-        col_iter = col_iter[:3]
+        col_iter = col_iter[:4]
 
     my_print_header("Imputing columns:", ", ".join(col_iter))
     for column in col_iter:
