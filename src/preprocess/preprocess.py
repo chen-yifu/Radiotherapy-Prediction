@@ -4,7 +4,7 @@ from src.preprocess.cleanse_dataset import cleanse_dataset
 from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
 from utils.get_timestamp import get_timestamp
-from utils.io import my_print_header, save_experiment_df, save_experiment_pickle
+from utils.io import my_print, my_print_header, save_experiment_df, save_experiment_pickle
 import utils.config as config
 from src.preprocess import *
 # from sklearn.impute import *
@@ -72,6 +72,10 @@ def preprocess(experiment_dir: str) -> None:
         df_metadata,
         sparsity_threshold=very_solid_threshold
         )
+    # Show the columns that have been filtered out by sparsity theshold
+    removed_cols = df.columns[~df.columns.isin(solid_df.columns)]
+    my_print(f"{len(removed_cols)} columns have > {solid_threshold} missing:")
+    print(f"{removed_cols}")
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
     result_holders = {}
     # col_iter = [c for c in df.columns[1:] if c not in very_solid_df.columns]

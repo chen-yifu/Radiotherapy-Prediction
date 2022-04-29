@@ -27,6 +27,8 @@ def engineer_features(df, df_metadata):
     abnormal_ln_sizes = []
     abnormal_ln_presents = []
     for i, row in tqdm(df.iterrows()):
+        # pre_op_biopsy_date_year or surgery_date_year - dob
+        raise Error("Email codebook to guys") TODO
         # Construct "age_at_dx" as the age at the time of diagnosis
         dob = pd.to_datetime(row["PRE_dob"])
         dx_date = pd.to_datetime(row["PRE_dximg_date"])
