@@ -346,16 +346,16 @@ def find_best_RF(
                 n_estimators=n_estimators,
                 random_state=0))
             for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
-                # print("BEFORE")  #, temp_df.isna().sum())
-                # print(temp_df)
+                print("BEFORE")  #, temp_df.isna().sum())
+                print(temp_df)
                 try:
                     # Temporarily set cells in fold to nan, and impute
                     cur_gt = temp_df.loc[test_index, column_name]
                     if str(cur_gt) == "nan":
                         continue
                     temp_df.loc[test_index, column_name] = np.nan
-                    # print("DURING")  #, temp_df.isna().sum())
-                    # print(temp_df)
+                    print("DURING")  #, temp_df.isna().sum())
+                    print(temp_df)
                     # If the entire column is nan, skip
                     if temp_df[column_name].isna().sum() == len(temp_df):
                         print(f"Skipping fold {i} due to all nan.")
@@ -373,8 +373,9 @@ def find_best_RF(
                             gt,
                             imp
                             )
-                    # print("AFTER")  #, imp_df.isna().sum())
-                    # print(imp_df)
+                        print(f"Added compare for gt {gt} and imp {imp}")
+                    print("AFTER")  #, imp_df.isna().sum())
+                    print(imp_df)
                 except ValueError as e:
                     print(f"Skipped row {i} due to an error: {e}")
                     if config.debug_mode:

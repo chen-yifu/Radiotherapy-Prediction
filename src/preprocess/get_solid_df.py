@@ -28,12 +28,9 @@ def get_solid_df(
             if len(col_group) and col_group.item() != "PRE":
                 columns.remove(col)
 
-    my_print(
-        f"{len(columns)} out of {len(df.columns)} all columns are PRE"
-        f" and have ≤ {sparsity_threshold} missing cells."
-        f"\nThey are {columns}",
-        plain=True
-        )
+    my_print(f"{len(columns)} out of {len(df.columns)} all columns are PRE"
+             f" and have ≤ {sparsity_threshold} missing cells.")
+    print(f"They are {columns}")
 
     result_df = pd.DataFrame(df[columns])
     return result_df
