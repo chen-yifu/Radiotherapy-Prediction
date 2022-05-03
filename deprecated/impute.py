@@ -29,6 +29,7 @@ def impute_cell(df, idx, col):
     if col == "men_status":
         return 1 if df["age"] > 50 else 0
 
+
 def impute_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Impute missing values in a column of a dataframe, modifies in place.
@@ -37,5 +38,4 @@ def impute_df(df: pd.DataFrame) -> pd.DataFrame:
         for i, row in enumerate(df[column]):
             if pd.isnull(row):
                 df.at[i, column] = 1
-            
-    print(df)
+
