@@ -131,7 +131,10 @@ class ColumnGridSearchResults:
             # TODO
             pass
 
-    def get_best_model(self, metric_name: str) -> Tuple[object, str, tuple]:
+    def get_best_model(
+        self,
+        metric_name: str
+    ) -> Tuple[object, str, tuple]:
         """"Returns the best model with the best hyperparameters for metric
 
         Args:
@@ -179,8 +182,22 @@ class ColumnGridSearchResults:
         with open(save_path, "wb") as f:
             pickle.dump(model, f)
         self.metrics[model_name][hyperparam]["model_pickle_path"] = save_path
-        
         return save_path
+
+    def impute_using_best_model(
+        self,
+        df: pd.DataFrame,
+        metric: str
+    ) -> pd.DataFrame:
+        """Impute the missing values using the best model
+
+        Args:
+            df (pd.DataFrame): the dataframe to impute
+            metric (str): the metric to select the best model
+        """
+        model = self.get_best_model(metric)
+        imputed_df = impute(model, df)
+        return imputed_df
 
     def save_best_models(self):
         # TODO
@@ -276,7 +293,7 @@ def find_best_KNN(
                     cur_imp
                     )
             except Exception as e:
-                print("ERROR", e)
+                # print("ERROR", e)
                 my_print(f"Skipped row {i} due to an error.")
                 # continue
                 raise e
@@ -318,7 +335,7 @@ def find_best_RF(
         IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
     """
     my_print(f"RF: search best max_depth over {max_depth_range}"
-                    f", and n_estimators {n_estimators_range}.")
+             f", and n_estimators {n_estimators_range}.")
 
     # TODO: for col in tqdm(df.columns):
     temp_df = base_cols_df.copy(deep=True)
@@ -346,16 +363,16 @@ def find_best_RF(
                 n_estimators=n_estimators,
                 random_state=0))
             for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
-                print("BEFORE")  #, temp_df.isna().sum())
-                print(temp_df)
+                # print("BEFORE")  #, temp_df.isna().sum())
+                # print(temp_df)
                 try:
                     # Temporarily set cells in fold to nan, and impute
                     cur_gt = temp_df.loc[test_index, column_name]
                     if str(cur_gt) == "nan":
                         continue
                     temp_df.loc[test_index, column_name] = np.nan
-                    print("DURING")  #, temp_df.isna().sum())
-                    print(temp_df)
+                    # print("DURING")  #, temp_df.isna().sum())
+                    # print(temp_df)
                     # If the entire column is nan, skip
                     if temp_df[column_name].isna().sum() == len(temp_df):
                         print(f"Skipping fold {i} due to all nan.")
@@ -373,9 +390,9 @@ def find_best_RF(
                             gt,
                             imp
                             )
-                        print(f"Added compare for gt {gt} and imp {imp}")
-                    print("AFTER")  #, imp_df.isna().sum())
-                    print(imp_df)
+                        # print(f"Added compare for gt {gt} and imp {imp}")
+                    # print("AFTER")  #, imp_df.isna().sum())
+                    # print(imp_df)
                 except ValueError as e:
                     print(f"Skipped row {i} due to an error: {e}")
                     if config.debug_mode:
@@ -441,7 +458,7 @@ def impute_column(
         RF_n_estimators_range = range(10, 351, 40)  # range(1, 15, 3)
         RF_max_depth_range = range(1, 11, 3)  # range(1, 15, 3)
 
-    best_KNN = find_best_KNN(
+    find_best_KNN(
         df,
         df_metadata,
         very_solid_df,
@@ -450,7 +467,7 @@ def impute_column(
         n_neighbors_range=KNN_n_neighbors_range
         )
 
-    best_RF = find_best_RF(
+    find_best_RF(
         df,
         df_metadata,
         very_solid_df,
@@ -464,5 +481,7 @@ def impute_column(
     best_model, name, hyperparam = result_holder.get_best_model(target_metric)
     my_print(f"The model with best {target_metric} is {name} {hyperparam}.")
     result_holder.show_compare(name, hyperparam)
+    print(f"Imputing {column_name} using best model...")
+    imputed_df = result_holder.impute_using_best_model(df, best_model)
 
-    return df, result_holder
+    return imputed_df, result_holder
