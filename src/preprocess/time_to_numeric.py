@@ -11,3 +11,4 @@ def time_to_numeric(df, df_metadata):
             if type == "time":
                 df[col] = df[col].apply(lambda x: pd.to_datetime(x).value)
     return df
+

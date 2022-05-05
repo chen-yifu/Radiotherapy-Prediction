@@ -33,7 +33,7 @@ def impute_cell(df, idx, col):
 def impute_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Impute missing values in a column of a dataframe, modifies in place.
-    """ 
+    """
     for column in df.columns:
         for i, row in enumerate(df[column]):
             if pd.isnull(row):

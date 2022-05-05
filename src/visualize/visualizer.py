@@ -10,7 +10,7 @@ from sklearn.linear_model import LinearRegression
 
 
 os.chdir("/Users/yifuchen/Work/Repositories/Radiotherapy-Prediction/") # Change current directory path to root
-df = pd.read_csv("./data/AllTranTrainVal.csv")
+df = pd.read_csv("./data/input/AllTranTrainVal.csv")
 df_missing = df.isnull().sum(axis=0)/600
 df_missing.to_csv("./data/AllTranTrainVal_sparsity.csv")
 
