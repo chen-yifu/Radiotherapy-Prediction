@@ -2,10 +2,24 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from dateutil.relativedelta import relativedelta
-from utils.io import my_print_header
+from utils.io import my_print_header, save_experiment_df
+import re
 
 
-def engineer_features(df, df_metadata):
+def engineer_features(
+    df: pd.DataFrame,
+    df_metadata: pd.DataFrame
+) -> pd.DataFrame:
+    """Perform feature engineering on the dataframe
+
+    Args:
+        df (pd.DataFrame): original DataFrame
+        df_metadata (pd.DataFrame): DataFrame with metadata
+
+    Returns:
+        pd.DataFrame: DataFrame with engineered features
+    """
+
     # Construct new columns from existing data
     my_print_header("Feature Engineering...")
     abnormal_ln_cols = [
@@ -22,10 +36,15 @@ def engineer_features(df, df_metadata):
         'PRE_axillary_lymph_node_max_si',
         'PRE_internal_mammary_lymph_nod'
         ]
- 
+
     age_at_dxs = []
     abnormal_ln_sizes = []
     abnormal_ln_presents = []
+
+    # Remove "ANN" prefix from record_id
+    df['PRE_record_id'] = df['PRE_record_id'].apply(
+        lambda x: re.sub(r'ANN|L|R', '', x))
+
     for i, row in tqdm(df.iterrows()):
         # TODO pre_op_biopsy_date_year or surgery_date_year - dob
         # Construct "age_at_dx" as the age at the time of diagnosis
@@ -34,7 +53,7 @@ def engineer_features(df, df_metadata):
         if str(dx_date) == "nan":
             age_at_dxs.append(np.nan)
         else:
-            years_elapsed = round((dx_date - dob).days / 365.25, 2)
+            years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
             age_at_dxs.append(years_elapsed)
         # Construct "abnormal_ln_size" as the maximum LN abnormality size
         max_size = 0
@@ -70,6 +89,10 @@ def engineer_features(df, df_metadata):
         "PRE_abnormal_ln_present",
         abnormal_ln_presents
         )
+    # Converet all string cells to numeric
+    df = df.apply(pd.to_numeric, errors='coerce')
+    print("Converted all string cells to numeric, and used NaN if impossible.")
     print("✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
           "'PRE_abnormal_ln_size', and 'PRE_abnormal_ln_present'.")
 
+    return df

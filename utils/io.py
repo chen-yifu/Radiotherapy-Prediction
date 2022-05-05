@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import utils.config as config
 
-out_dir = f"data/experiments/"
+out_dir = "data/output/"
 
 
 # LOADER FUNCTIONS #
@@ -23,16 +23,32 @@ def initialize_experiment_folder():
     experiment_dir = os.path.join(out_dir, cur_timestamp)
     os.mkdir(experiment_dir)
     config.experiment_dir = experiment_dir
-    my_print("Created experiment folder:", experiment_dir)
+    my_print(
+        "Created experiment folder:",
+        experiment_dir,
+        color=bcolors.OKGREEN
+    )
     return experiment_dir
 
 
-def save_experiment_df(df: pd.DataFrame, file_name: str, description: str):
+def save_experiment_df(
+    df: pd.DataFrame,
+    file_name: str,
+    description: str,
+    skip_if_exists: bool = False
+):
     # Save the dataframe to experiment folder
     experiment_dir = config.experiment_dir
-    file_path = os.path.join(experiment_dir, file_name)
+    dir = os.path.join(experiment_dir, "DataFrames")
+    os.makedirs(dir, exist_ok=True)
+    file_path = os.path.join(dir, file_name)
+    if skip_if_exists and os.path.exists(file_path):
+        return
     df.to_csv(file_path, index=False)
-    my_print_header(f"Saved {description} DataFrame to: {file_path}.")
+    my_print(
+        f"Saved DataFrame for {description} to: {file_path}.",
+        color=bcolors.OKGREEN
+    )
     return file_path
 
 
@@ -41,7 +57,10 @@ def save_experiment_pickle(object, file_name: str, description: str):
     file_path = os.path.join(experiment_dir, file_name)
     with open(file_path, 'wb') as f:
         pickle.dump(object, f)
-    my_print_header(f"Saved {description} Object to: {file_path}.")
+    my_print(
+        f"Saved {description} Object to: {file_path}.",
+        color=bcolors.OKGREEN
+    )
     return file_path
 
 
