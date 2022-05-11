@@ -5,7 +5,7 @@ from src.preprocess import time_to_numeric
 from src.preprocess.cleanse_dataset import cleanse_dataset
 from src.preprocess.engineer_features import engineer_features
 from src.preprocess.get_solid_df import get_solid_df
-from utils.io import my_print
+from utils.io import load_result_holders, my_print
 from utils.io import my_print_header
 from utils.io import save_experiment_df
 from utils.io import save_experiment_pickle
@@ -43,7 +43,6 @@ def preprocess(experiment_dir: str) -> None:
     # Column Renaming - add PRE/INT/POS prefix to column names
     rename_columns.rename_columns(df, df_metadata)
 
-
     # Shuffle the rows in DataFrame
     df = df.sample(frac=1, random_state=0).reset_index(drop=True)
 
@@ -76,7 +75,6 @@ def preprocess(experiment_dir: str) -> None:
     # Convert Time columns into Numeric columns
     df = time_to_numeric.time_to_numeric(df, df_metadata)
 
-
     # Get Solid DataFrame - remove columns that are too sparse
     my_print_header("Using solid PRE columns to impute the other columns.")
     solid_df = get_solid_df(
@@ -98,9 +96,10 @@ def preprocess(experiment_dir: str) -> None:
     # Show the columns that have been filtered out by sparsity theshold
     removed_cols = df.columns[~df.columns.isin(solid_df.columns)]
     my_print(f"{len(removed_cols)} columns have > {solid_threshold} missing:")
-    print(f"{removed_cols}")
+    my_print(f"{removed_cols}", color=bcolors.NORMAL)
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
-    result_holders = {}
+    # Load result_holders from experiment_dir if there existes one
+    result_holders = load_result_holders(experiment_dir)
     col_iter = df.columns
     # Sort columns by the increasing percentage of missing values
     col_iter = sorted(
@@ -122,36 +121,42 @@ def preprocess(experiment_dir: str) -> None:
             f"Imputing column {column} with {missingness} missing."
             f" {i+1} of {len(col_iter)}."
         )
-        print(f"{column} is ", end="")
+        print_str = f"{column} is "
         if is_very_solid:
-            print("very solid, therefore"
-                  " any imputed values will be used for future imputations.")
+            print_str += "very solid, therefore" \
+                " any imputed values will be used for future imputations."
         elif is_solid:
-            print("solid.")
+            print_str += "solid."
         else:
-            print("sparse.")
+            print_str += "sparse."
+        my_print(print_str, color=bcolors.NORMAL)
         # Impute a column if and only if it has at least one missing value
         if missingness == 0:
-            print(f"{column} has no missing values.")
+            my_print(f"{column} has no missing values.", color=bcolors.NORMAL)
             continue
         elif missingness == 1:
-            print(f"{column} has no non-missing values.")
+            my_print(f"{column} is 100% missing.", color=bcolors.NORMAL)
             continue
         elif column == "POS_did_the_patient_receive_pm":
-            print(f"Skipping {column} because it's the target column.")
+            my_print(f"Skipping {column} because it's the target column.")
             continue
         try:
             # TODO use imputed DF to impute the next column
+            if column in result_holders:
+                result_holder = result_holders[column]
+            else:
+                result_holder = None
             imputed_df, result_holder = impute_column.impute_column(
                 df,
                 df_metadata,
                 base_cols_df,
                 column,
-                "rmse"
+                "rmse",
+                result_holder
                 )
             result_holders[column] = result_holder
             save_experiment_df(
-                df,
+                imputed_df,
                 f"Dataset_Imputed-{column}-{i}_{len(col_iter)}.csv",
                 f"the imputed csv file for column {column}"
             )
@@ -160,10 +165,11 @@ def preprocess(experiment_dir: str) -> None:
                 f"Overwrote missing {column} with imputed values.",
                 color=bcolors.OKBLUE
             )
-            if is_very_solid:
+            # FIXME Add parameter for including is_solid columns
+            if is_very_solid or is_solid:
                 base_cols_df = imputed_df
                 my_print(
-                    f"Overwrote base DataFrame ({column} is very solid).",
+                    f"Overwrote base DataFrame ({column} is solid).",
                     color=bcolors.OKBLUE
                 )
         except Exception as e:

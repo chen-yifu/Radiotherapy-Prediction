@@ -30,7 +30,7 @@ def get_solid_df(
 
     my_print(f"{len(columns)} out of {len(df.columns)} all columns are PRE"
              f" and have ≤ {sparsity_threshold} missing cells.")
-    print(f"They are {columns}")
+    my_print(f"They are {columns}")
 
     result_df = pd.DataFrame(df[columns])
     return result_df

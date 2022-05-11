@@ -7,6 +7,8 @@ To run the pipeline:
 To run the pipeline in debug mode:
 `python3 main.py --debug`
 
+To run the pipeline with previously-found best models:
+`python3 main.py -f `
 To visualize data:
 `python3 src/visualize/visualizer.py`
 
@@ -16,7 +18,7 @@ To visualize all columns:
 To run tests:
 `python -m pytest tests/`
 
-To display logs (with highlights):
+To display logs (with color-coded texts):
 `cat data/preprocessed/<OUTPUT_TIMESTAMP>/log.txt`
 
 ## Preprocessing Module
