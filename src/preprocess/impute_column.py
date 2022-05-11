@@ -1,8 +1,9 @@
 from typing import Dict, List, OrderedDict, Tuple, Union
 from sklearn.experimental import enable_iterative_imputer  # Required Import
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.impute import IterativeImputer
 from sklearn.impute import KNNImputer
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import KFold
 from sklearn import preprocessing
 # from sklearn.metrics import mean_squared_error
@@ -12,9 +13,11 @@ import os
 import re
 import pickle
 from collections import defaultdict
+
 from utils.io import my_print
 from utils.io import save_experiment_df
 from utils.io import bcolors
+from utils.find_column_type import find_column_type, is_integral_type
 import utils.config as config
 
 # df_compare_path = f"data/output/{get_timestamp()}/Impute_Comparison.csv"
@@ -60,7 +63,8 @@ class ColumnGridSearchResults:
         model_name: str,
         hyperparameter_setting: tuple,
         gtruth: Union[str, float, int],
-        imputed: Union[str, float, int]
+        imputed: Union[str, float, int],
+        patient_id: str
     ) -> None:
         """Add the (ground truth, imputed) tuple to the compares field
 
@@ -74,12 +78,14 @@ class ColumnGridSearchResults:
         if type(imputed) == float:
             imputed = round(imputed, 4)
 
-        tupl = (gtruth, imputed)
+        tupl = (gtruth, imputed, patient_id)
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
         if not compares or type(compares) is float:
+            # This is the first comparison
             holder["compares"] = [tupl]
         else:
+            # This is not the first comparison
             holder["compares"].append(tupl)
 
     def show_compare(
@@ -95,10 +101,10 @@ class ColumnGridSearchResults:
         """
         compares = self.metrics[model_name][hyperparameter_setting]["compares"]
         my_print(
-            "Comparing (ground_truth, imputed) values of"
+            "Showing (ground_truth, imputed, patient_id) imputed by"
             f" {model_name} with hyperparameters {hyperparameter_setting}:",
             color=bcolors.BOLD)
-        print(compares)
+        my_print(str(compares), color=bcolors.NORMAL)
 
     def calc_metrics(
         self,
@@ -116,13 +122,13 @@ class ColumnGridSearchResults:
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
         if type(compares) == float:
-            print("No 'compares' to calculate metrics")
+            my_print("No 'compares' to calculate metrics", color=bcolors.NORMAL)
             return -1
         # Calculate RMSE of the imputation
         # TODO implement metric calculation for accuracy, F1, rmse
         if metric == "rmse":
             total_sq_error, total_count = 0, 0
-            for gt, imp in compares:
+            for gt, imp, _ in compares:
                 total_sq_error += (gt - imp) ** 2
                 total_count += 1
             rmse = (total_sq_error/total_count) ** 0.5
@@ -138,15 +144,24 @@ class ColumnGridSearchResults:
 
     def get_best_model(
         self,
-        metric_name: str
+        metric_name: str,
+        model_name: str = "any"
     ) -> Tuple[object, str, tuple]:
         """"Returns the best model with the best hyperparameters for metric
 
         Args:
             metric_name (str): the metric used to select the best model
         """
-        all_hypers = [(hyper_dict, name) for name in self.model_names
-                      for hyper_dict in self.metrics[name]]
+        if model_name == "any":
+            all_hypers = [
+                (hyper_dict, name) for name in self.model_names
+                for hyper_dict in self.metrics[name]
+                        ]
+        else:
+            all_hypers = [
+                (hyper_dict, model_name) for hyper_dict
+                in self.metrics[model_name]
+                ]
 
         # Take the minimum of metric among all hyperparameters of all models
         (hyper_dict, name) = min(
@@ -204,12 +219,31 @@ class ColumnGridSearchResults:
             metric (str): the metric to select the best model
         """
 
-        model, name, hyper = self.get_best_model(metric)
-        temp_df = base_cols_df.copy(deep=True)
         column_name = self.column_name
+        model, name, hyper = self.get_best_model(metric)
+        my_print(f"The best model for {column_name} is {name} using {hyper}.")
+        temp_df = base_cols_df.copy(deep=True)
         if column_name not in temp_df.columns:
             temp_df[column_name] = df[column_name]
-        imputed_df = impute(model, temp_df, df_metadata)
+        imputed_df = impute(model, temp_df, df_metadata, column_name)
+        # Show the values that are imputed and was missing before
+        my_print(f"Before and After of {column_name}:", color=bcolors.BOLD)
+        missing_idxs = df[column_name].isnull()
+        missing_idxs = missing_idxs.index[missing_idxs]
+        # Print DataFrame ID, value before imputation, and imputed value
+        my_print(
+            str(df.loc[
+                missing_idxs,
+                ["PRE_record_id", column_name]
+                ].head()),
+            "\n",
+            str(imputed_df.loc[
+                missing_idxs,
+                ["PRE_record_id", column_name]
+            ]),
+            color=bcolors.NORMAL
+        )
+
         return imputed_df
 
     def save_best_models(self):
@@ -224,7 +258,8 @@ class ColumnGridSearchResults:
 def impute(
     imputer,
     df: pd.DataFrame,
-    df_metadata: pd.DataFrame
+    df_metadata: pd.DataFrame,
+    column_name: str
 ) -> pd.DataFrame:
     """Perform imputation on a dataframe using the given imputer
 
@@ -232,29 +267,30 @@ def impute(
         imputer (sklearn.Impute): the imputer to use
         df (pd.DataFrame): the dataframe to impute
         df_metadata (pd.DataFrame): the metadata of the dataframe
+        column_name (str): the name of the column to impute
     Returns:
         pd.DataFrame: the imputed dataframe
     """
-    # print("Imputing DF:", len(df.columns), df.columns)
     # TODO fix this
-    # def helper(val):
-    #     temp = re.sub("[^0-9.]", "", str(val))
-    #     if temp and len(temp) and temp != ".":
-    #         return float(temp)
-    #     else:
-    #         return 0
-    # df = df.applymap(lambda x: helper(x))
-    # print("DF before imputation:", df.head())
-    imputed_df = imputer.fit_transform(df)
-    # print("Shape of imputed df", imputed_df.shape)
-    # print("Shape of original df", df.shape)
-    new_df = pd.DataFrame(
-        imputed_df,
-        columns=df.columns
-        # index=df.index
-        )
-    # print("DF after imputation:", new_df.head())
-    return new_df
+    # Drop all-null column of DF
+    nonmissing_df = df.dropna(axis=1, how="all")
+    if column_name not in nonmissing_df.columns:
+        # The column is all null
+        return df
+    else:
+        imputed_df = imputer.fit_transform(nonmissing_df)
+        new_df = pd.DataFrame(
+            imputed_df,
+            columns=nonmissing_df.columns
+            )
+        # Convert the imputed column to the right data type
+        data_type = find_column_type(df_metadata, column_name)
+        if is_integral_type(data_type):
+            # Round to the nearest integer if column type is like an integer
+            # Useful for KNN - it outputs float numbers due to standardization
+            new_df[column_name] = new_df[column_name].round().astype(int)
+
+        return new_df
 
 
 def find_best_KNN(
@@ -300,12 +336,28 @@ def find_best_KNN(
             skip_if_exists=True
         )
     temp_df = base_cols_df.copy(deep=True)
-    if column_name not in temp_df.columns:
-        temp_df[column_name] = df[column_name]
+    temp_df[column_name] = df[column_name]
+
+    data_type = find_column_type(df_metadata, column_name)
+
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_n = 0
     for n_neighbors in n_neighbors_range:
+        # if data_type in [
+        #         ColumnType.CATEGORICAL,
+        #         ColumnType.ORDINAL,
+        #         ColumnType.INTEGER
+        # ]:
+        #     KNN = IterativeImputer(
+        #         estimator=KNeighborsClassifier(n_neighbors=n_neighbors),
+        #         random_state=0
+        #     )
+        # else:
+        # KNN = IterativeImputer(
+        #     estimator=KNeighborsRegressor(n_neighbors=n_neighbors),
+        #     random_state=0
+        # )
         KNN = KNNImputer(n_neighbors=n_neighbors)
         hyperparameter = tuple(
             OrderedDict({"n_neighbors": n_neighbors}).items()
@@ -314,17 +366,19 @@ def find_best_KNN(
             try:
                 # Temporarily set a cell to nan, and impute
                 cur_gt = temp_df.loc[i, column_name]
+                patient_id = df.loc[i, "PRE_record_id"]
                 if str(cur_gt) == "nan":
                     continue
                 temp_df.loc[i, column_name] = np.nan
-                imp_df = impute(KNN, temp_df, df_metadata)
+                imp_df = impute(KNN, temp_df, df_metadata, column_name)
                 cur_imp = imp_df.loc[i, column_name]
                 temp_df.loc[i, column_name] = cur_gt  # Restore ground truth
                 result_holder.add_compare(
                     "KNN",
                     hyperparameter,
                     cur_gt,
-                    cur_imp
+                    cur_imp,
+                    patient_id
                     )
             except Exception as e:
                 my_print(f"Skipped row {i} due to an error.")
@@ -376,6 +430,7 @@ def find_best_RF(
         temp_df[column_name] = df[column_name]
     # temp_df = temp_df[temp_df[col].notna()] # Drop rows with nan in column
     # # TODO ennsure nans are dropped
+    data_type = find_column_type(df_metadata, column_name)
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")
     best_max_depth = 0
@@ -390,49 +445,54 @@ def find_best_RF(
                 "n_estimators": n_estimators,
                 "max_depth": max_depth
                 }.items(), key=lambda x: x[0]))
+            # if is_integral_type(data_type):
+            #     RF = IterativeImputer(estimator=RandomForestClassifier(
+            #         max_depth=max_depth,
+            #         n_estimators=n_estimators,
+            #         random_state=0))
+            # else:
             RF = IterativeImputer(estimator=RandomForestRegressor(
                 max_depth=max_depth,
                 n_estimators=n_estimators,
                 random_state=0))
-            for i, (train_index, test_index) in enumerate(kf.split(temp_df)):
-                # print("BEFORE")  #, temp_df.isna().sum())
-                # print(temp_df)
+            for i, (_, test_index) in enumerate(kf.split(temp_df)):
                 try:
                     # Temporarily set cells in fold to nan, and impute
                     cur_gt = temp_df.loc[test_index, column_name]
                     if str(cur_gt) == "nan":
                         continue
                     temp_df.loc[test_index, column_name] = np.nan
-                    # print("DURING")  #, temp_df.isna().sum())
-                    # print(temp_df)
+                    patient_ids = temp_df.loc[test_index, "PRE_record_id"]
                     # If the entire column is nan, skip
                     if temp_df[column_name].isna().sum() == len(temp_df):
                         print(f"Skipping fold {i} due to all nan.")
                         continue
-                    imp_df = impute(RF, temp_df, df_metadata)
+                    imp_df = impute(RF, temp_df, df_metadata, column_name)
                     cur_imp = imp_df.loc[test_index, column_name]
                     # Restore ground truth
                     temp_df.loc[test_index, column_name] = cur_gt
-                    for imp, gt in zip(cur_imp, cur_gt):
+                    for imp, gt, pid in zip(cur_imp, cur_gt, patient_ids):
                         if str(gt) == "nan":
                             continue
                         result_holder.add_compare(
                             "RF",
                             hyperparameter,
                             gt,
-                            imp
+                            imp,
+                            pid
                             )
-                        # print(f"Added compare for gt {gt} and imp {imp}")
-                    # print("AFTER")  #, imp_df.isna().sum())
-                    # print(imp_df)
                 except ValueError as e:
-                    print(f"Skipped row {i} due to an error: {e}")
+                    my_print(
+                        f"Skipped row {i} due to an error: {e}",
+                        color=bcolors.NORMAL
+                    )
                     if config.debug_mode:
                         raise e
                     else:
                         continue
 
             rmse = result_holder.calc_metrics("RF", hyperparameter, "rmse")
+
             if rmse < best_rmse:
                 best_n = n_estimators
                 best_max_depth = max_depth
@@ -461,7 +521,8 @@ def impute_column(
     df_metadata: pd.DataFrame,
     base_cols_df: pd.DataFrame,
     column_name: str,
-    target_metric: str
+    target_metric: str,
+    result_holder: ColumnGridSearchResults = None
         ) -> Tuple[pd.DataFrame, ColumnGridSearchResults]:
     """Optimize KNN and RF Imputers, and use the best model to impute the column.
 
@@ -471,48 +532,57 @@ def impute_column(
         base_cols_df (pd.DataFrame): DataFrame to impute the column
         column_name (str): the column to impute
         target_metric (str): the metric to optimize (F1, accuracy, rmse)
-
+        result_holder (ColumnGridSearchResults): the object to store results
     Returns:
         Tuple[pd.DataFrame, ColumnGridSearchResults]: Imputed DataFrame and
             results of grid search
     """
     my_print(f"Optimizing for the best imputer for {column_name}...")
 
-    result_holder = ColumnGridSearchResults(column_name)
+    if not result_holder:
+        result_holder = ColumnGridSearchResults(column_name)
+        my_print(f"Using the following columns to impute {column_name}:")
+        my_print(", ".join(base_cols_df.columns), plain=True)
+        if config.debug_mode:
+            KNN_n_neighbors_range = [3, 5]
+            RF_n_estimators_range = [10, 30]
+            RF_max_depth_range = [2, 4]
+        else:
+            # [3, 5, 9, 15, 23, 33, 45, 59]  # range(3, 19, 2)
+            KNN_n_neighbors_range = [3, 5, 9, 15, 23, 33]
 
-    if config.debug_mode:
-        KNN_n_neighbors_range = range(5, 19, 2)
-        RF_n_estimators_range = range(5, 16, 5)  # range(3, 7, 2)
-        RF_max_depth_range = range(3, 9, 3)   # range(3, 5, 1)
-    else:
-        KNN_n_neighbors_range = [3, 5, 9, 15, 23, 33, 45, 59]  # range(3, 19, 2)
-        RF_n_estimators_range = [50, 150]  # range(51, 251, 50)  # range(1, 15, 3)
-        RF_max_depth_range = [7, 11, 15]  # range(5, 16, 3)  # range(1, 15, 3)
+            # [50, 150]  # range(51, 251, 50)  # range(1, 15, 3)
+            RF_n_estimators_range = [30, 50, 90]
 
-    find_best_KNN(
-        df,
-        df_metadata,
-        base_cols_df,
-        result_holder,
-        column_name,
-        n_neighbors_range=KNN_n_neighbors_range
-        )
+            #  range(3, 8, 2)  # range(5, 16, 3)  # range(1, 15, 3)
+            RF_max_depth_range = [4, 7, 10]
 
-    find_best_RF(
-        df,
-        df_metadata,
-        base_cols_df,
-        result_holder,
-        column_name,
-        max_depth_range=RF_max_depth_range,
-        n_estimators_range=RF_n_estimators_range
-        )
+        find_best_KNN(
+            df,
+            df_metadata,
+            base_cols_df,
+            result_holder,
+            column_name,
+            n_neighbors_range=KNN_n_neighbors_range
+            )
 
-    # Use the best model to impute this column
-    best_model, name, hyperparam = result_holder.get_best_model(target_metric)
-    my_print(f"The model with best {target_metric} is {name} {hyperparam}.")
-    result_holder.show_compare(name, hyperparam)
+        find_best_RF(
+            df,
+            df_metadata,
+            base_cols_df,
+            result_holder,
+            column_name,
+            max_depth_range=RF_max_depth_range,
+            n_estimators_range=RF_n_estimators_range
+            )
+    # Show the imputation of the best model of each type, e.g., KNN, RF
+    for model_name in result_holder.model_names:
+        _, _, hyper = result_holder.get_best_model(target_metric, model_name)
+        my_print(f"{model_name} with best {target_metric} used {hyper}.")
+        result_holder.show_compare(model_name, hyper)
+
     print(f"Imputing {column_name} using the best model...")
+    # Use the best model to impute this column
     imputed_df = result_holder.impute_using_best_model(
         df,
         df_metadata,

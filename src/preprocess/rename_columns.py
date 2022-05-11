@@ -1,4 +1,4 @@
-from utils.io import my_print_header
+from utils.io import my_print, my_print_header
 from tqdm import tqdm
 
 
@@ -12,4 +12,4 @@ def rename_columns(df, df_metadata):
         rename_dict[col] = prefix+"_"+col
     df.rename(columns=rename_dict, inplace=True)
 
-    print("✅ Column Renamming - Added PRE/INT/POS column name prefixes.")
+    my_print("✅ Column Renamming - Added PRE/INT/POS column name prefixes.")

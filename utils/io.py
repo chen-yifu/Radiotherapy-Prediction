@@ -1,4 +1,5 @@
 # IO Helpers for loading, saving, and printing
+from typing import Dict
 from utils.get_timestamp import get_timestamp
 import os
 import dill as pickle
@@ -10,7 +11,39 @@ out_dir = "data/output/"
 
 
 # LOADER FUNCTIONS #
-def load_col_type(path):
+def load_result_holders(experiment_dir: str) \
+        -> Dict[str, object]:
+    """Load the result holders from the experiment directory, if exists
+
+    Args:
+        experiment_dir (str): path to experiment directory
+
+    Returns:
+        List[ColumnGridSearchResults]: list of result holders
+    """
+    pickle_name = "AllColumnsGridSearchResultHolders.pkl"
+    path = os.path.join(experiment_dir, pickle_name)
+    if not os.path.exists(path):
+        my_print("No result holders found, initialized to empty dict.")
+        return {}
+    else:
+        with open(path, "rb") as f:
+            result_holders = pickle.load(f)
+        my_print("Loaded result holders from:", path)
+        my_print(
+            f"Found result_holders for columns {result_holders.keys()}",
+            bcolors.NORMAL
+        )
+        return result_holders
+
+
+def load_col_type(path: str):
+    """Load the column type from the path
+
+    Args:
+        path (str): path to the column type file
+
+    """
     with open(path, "r") as f:
         col_type = json.load(f)
     return col_type
@@ -86,6 +119,7 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    NORMAL = '\033[0m'
 
 
 def my_print(*args, add_sep=False, color=bcolors.WARNING, plain=False):

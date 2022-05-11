@@ -22,7 +22,7 @@ def cleanse_dataset(df, metadata_df):
                 cleansed_locs[(i, col)] = (orig_val, val)
     my_print(
         "✅ Dataset Cleansing - Used expert manual rules to"
-        f"replace noisy values. {len(cleansed_locs)} cells were changed.",
+        f" replace noisy values. {len(cleansed_locs)} cells were changed.",
         plain=True)
 
     return cleansed_locs

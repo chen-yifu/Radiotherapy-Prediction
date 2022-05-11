@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from dateutil.relativedelta import relativedelta
-from utils.io import my_print_header, save_experiment_df
+from utils.find_column_type import is_integral_type
+from utils.io import my_print, my_print_header, save_experiment_df
 import re
 
 
@@ -11,7 +12,7 @@ def engineer_features(
     df_metadata: pd.DataFrame
 ) -> pd.DataFrame:
     """Perform feature engineering on the dataframe
-
+    Note: When a new feature is added, remember to add to Metadata CSV file
     Args:
         df (pd.DataFrame): original DataFrame
         df_metadata (pd.DataFrame): DataFrame with metadata
@@ -89,10 +90,19 @@ def engineer_features(
         "PRE_abnormal_ln_present",
         abnormal_ln_presents
         )
+
     # Converet all string cells to numeric
     df = df.apply(pd.to_numeric, errors='coerce')
-    print("Converted all string cells to numeric, and used NaN if impossible.")
-    print("✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
-          "'PRE_abnormal_ln_size', and 'PRE_abnormal_ln_present'.")
+
+    # If a column is integral type, make it column int
+    for col in df.columns:
+        if is_integral_type(col):
+            df[col] = df[col].astype("int")
+
+    my_print("Converted all strings to numeric, and used NaN if impossible.")
+    my_print(
+        "✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
+        "'PRE_abnormal_ln_size', and 'PRE_abnormal_ln_present'."
+    )
 
     return df
