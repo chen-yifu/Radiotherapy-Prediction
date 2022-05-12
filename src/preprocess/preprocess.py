@@ -13,27 +13,46 @@ from utils.io import bcolors
 import utils.config as config
 import pandas as pd
 
-col_type_path = "data/metadata/col_types.json"
-df_path = "data/input/AllTranTrainVal.csv"
-metadata_path = "data/input/metadata/Metadata.xlsx"
+# col_type_path = "data/metadata/col_types.json"
+# df_path = "data/input/AllTranTrainVal.csv"
+# metadata_path = "data/input/metadata/Metadata.xlsx"
 # out_KNN_path = "data/preprocessed/AllTranTrainVal-KNNImputed.csv"
 # out_RF_path = "data/preprocessed/AllTranTrainVal-RFImputed.csv"
 
 # Max percentage of missing cells for a column to be considered very_solid
-very_solid_threshold = 0.05
+# very_solid_threshold = 0.05
 # Max percentage of missing cells for a column to be considered solid
-solid_threshold = 0.20
+# solid_threshold = 0.20
 
 
-def preprocess(experiment_dir: str) -> None:
+def preprocess(
+    experiment_dir: str,
+    very_solid_threshold: float = 0.05,
+    solid_threshold: float = 0.20,
+    metadata_path: str = "data/input/metadata/Metadata.xlsx",
+    df_path: str = "data/input/AllTranTrainVal.csv",
+    use_solid_cols: bool = True
+) -> None:
     """
     Preprocess the dataset through:
         - renaming variables
         - cleaning up noisy values
+        - engineering new features
         - applying expert pre-processing rules
-        - filling in missing values through imputation
+        - searching for the optimal ML hyperparameters for each column
+        - filling in missing values through ML imputation using opimal model
+    Note: The imputation uses very_solid columns to predict other columns,
+          and if use_solid_cols is set to True, it will use solid columns too.
+
     Args:
         experiment_dir (str): Path to experiment folder.
+        very_solid_threshold (float): Max sparsity for very_solid columns.
+        solid_threshold (float): Max sparsity for solid columns.
+        metadata_path (str, optional): Path to metadata file.
+        df_path (str, optional): Path to dataframe file.
+
+    Raises:
+        e:  Raise Error if there was a bug and config.debug_mode is True.
     """
     debug_mode = config.debug_mode
     # Read Dataset
@@ -54,19 +73,15 @@ def preprocess(experiment_dir: str) -> None:
     save_experiment_df(df, "Dataset-feature_eng.csv", "engineered features")
 
     # Dataset Cleansing - remove noisy values such as "n/a"
-    cleansed_locs = cleanse_dataset(df, df_metadata)
-    save_experiment_df(
-        df, "Dataset-cleansed.csv", "cleansed dataset"
-    )
+    cleanse_dataset(df, df_metadata)
+    save_experiment_df(df, "Dataset-cleansed.csv", "cleansed dataset")
     # Expert Imputation - apply manual imputation rules
-    imputed_locs = expert_impute.expert_impute(df, df_metadata)
-    save_experiment_df(
-        df, "Dataset-expert-imputed.csv", "expert-imputed"
-    )
+    expert_impute.expert_impute(df, df_metadata)
+    save_experiment_df(df, "Dataset-expert-imputed.csv", "expert-imputed")
 
     df = df.apply(pd.to_numeric, errors='coerce')
     save_experiment_df(
-        df, "Dataset-numeric2.csv", "numeric dataframe"
+        df, "Dataset-to_numeric.csv", "numeric dataframe"
     )
 
 
@@ -98,9 +113,11 @@ def preprocess(experiment_dir: str) -> None:
     my_print(f"{len(removed_cols)} columns have > {solid_threshold} missing:")
     my_print(f"{removed_cols}", color=bcolors.NORMAL)
     # TODO ML Imputation - Apply KNN and Random Forest Imputers
+
     # Load result_holders from experiment_dir if there existes one
     result_holders = load_result_holders(experiment_dir)
     col_iter = df.columns
+
     # Sort columns by the increasing percentage of missing values
     col_iter = sorted(
         col_iter,
@@ -130,6 +147,7 @@ def preprocess(experiment_dir: str) -> None:
         else:
             print_str += "sparse."
         my_print(print_str, color=bcolors.NORMAL)
+
         # Impute a column if and only if it has at least one missing value
         if missingness == 0:
             my_print(f"{column} has no missing values.", color=bcolors.NORMAL)
@@ -166,7 +184,7 @@ def preprocess(experiment_dir: str) -> None:
                 color=bcolors.OKBLUE
             )
             # FIXME Add parameter for including is_solid columns
-            if is_very_solid or is_solid:
+            if is_very_solid or (use_solid_cols and is_solid):
                 base_cols_df = imputed_df
                 my_print(
                     f"Overwrote base DataFrame ({column} is solid).",
