@@ -122,7 +122,7 @@ class ColumnGridSearchResults:
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
         if type(compares) == float:
-            my_print("No 'compares' to calculate metrics", color=bcolors.NORMAL)
+            my_print("No 'compares' was found", color=bcolors.NORMAL)
             return -1
         # Calculate RMSE of the imputation
         # TODO implement metric calculation for accuracy, F1, rmse
@@ -222,6 +222,14 @@ class ColumnGridSearchResults:
         column_name = self.column_name
         model, name, hyper = self.get_best_model(metric)
         my_print(f"The best model for {column_name} is {name} using {hyper}.")
+        if name == "KNN":
+            scaler = preprocessing.StandardScaler().fit(base_cols_df)
+            base_cols_df = pd.DataFrame(
+                scaler.transform(base_cols_df),
+                columns=base_cols_df.columns
+            )
+            my_print("Standardized base columns for KNN imputation.",
+                     color=bcolors.NORMAL)
         temp_df = base_cols_df.copy(deep=True)
         if column_name not in temp_df.columns:
             temp_df[column_name] = df[column_name]
@@ -331,14 +339,14 @@ def find_best_KNN(
         )
         save_experiment_df(
             base_cols_df,
-            "standardized_cols_df.csv",
+            f"standardized_cols_df_for_KNN_{column_name}.csv",
             "the dataframe with the standardized columns",
             skip_if_exists=True
         )
     temp_df = base_cols_df.copy(deep=True)
     temp_df[column_name] = df[column_name]
 
-    data_type = find_column_type(df_metadata, column_name)
+    # data_type = find_column_type(df_metadata, column_name)
 
     # Perform grid-search to find the optimal n_neighbors for KNN Imputer
     best_rmse = float("inf")

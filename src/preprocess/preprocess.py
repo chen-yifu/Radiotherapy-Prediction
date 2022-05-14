@@ -58,6 +58,9 @@ def preprocess(
     # Read Dataset
     df_metadata = pd.read_excel(metadata_path, sheet_name="Sheet1")
     df = pd.read_csv(df_path)
+    save_experiment_df(
+        df, "Dataset-Original.csv", "input DataFrame before preprocessing"
+    )
 
     # Column Renaming - add PRE/INT/POS prefix to column names
     rename_columns.rename_columns(df, df_metadata)
@@ -164,6 +167,11 @@ def preprocess(
                 result_holder = result_holders[column]
             else:
                 result_holder = None
+            save_experiment_df(
+                imputed_df,
+                f"Dataset_BaseCols-{column}-{i}_{len(col_iter)}.csv",
+                f"the base_cols_df csv file for imputing column {column}"
+            )
             imputed_df, result_holder = impute_column.impute_column(
                 df,
                 df_metadata,
@@ -176,7 +184,7 @@ def preprocess(
             save_experiment_df(
                 imputed_df,
                 f"Dataset_Imputed-{column}-{i}_{len(col_iter)}.csv",
-                f"the imputed csv file for column {column}"
+                f"the imputed_df csv file for imputing column {column}"
             )
             df[column] = imputed_df[column]
             my_print(
