@@ -52,8 +52,11 @@ def load_col_type(path: str):
 # SAVER FUNCTIONS #
 def initialize_experiment_folder():
     # Make a folder for saving the experiment data
-    cur_timestamp = get_timestamp()
-    experiment_dir = os.path.join(out_dir, cur_timestamp)
+    cur_timestamp = str(get_timestamp())
+    if config.debug_mode:
+        experiment_dir = os.path.join(out_dir, cur_timestamp + "_debug")
+    else:
+        experiment_dir = os.path.join(out_dir, cur_timestamp)
     os.mkdir(experiment_dir)
     config.experiment_dir = experiment_dir
     my_print(
