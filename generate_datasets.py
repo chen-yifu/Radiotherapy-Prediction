@@ -4,9 +4,10 @@ import os
 from regex import F
 
 global out_dir, input_dir
-output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/May18 Datasets for Experiments Table Debugged"
+output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/May19 Datasets for Experiments Table (includes Alan's Heuritsic)"
 input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-05-16-235040/DataFrames"
 
+df_idx = 0
 
 class bcolors:
     # Helper class to print in terminal with colors
@@ -23,8 +24,14 @@ class bcolors:
 
 
 def custom_to_csv(df, out_dir, out_name, index=False):
+    global df_idx
+    if 'POS_did_the_patient_receive_pm' not in df.columns:
+        raise ValueError("POS_did_the_patient_receive_pm is not in the dataframe")
     # Reformat the out_name with number of columns
     out_name = out_name.replace(".csv", str(len(df.columns)) + "cols.csv")
+    # Add Hex prefix
+    out_name = format(df_idx, "x").upper() + "_" + out_name
+    df_idx += 1
     df.to_csv(os.path.join(out_dir, out_name), index=index)
     column_sparsities = {}
     for column in df.columns:
@@ -65,12 +72,29 @@ if __name__ == "__main__":
         col_sparsities[col] = df_expert_imputed[col].isnull().sum() \
             / len(df_expert_imputed)
     print(f"Column sparsities: {col_sparsities}")
+    # Generate Alan's Heuristic DF
+    alan_picked_cols = [
+        "PRE_abnormal_lymph",
+        "PRE_prominent_axillary_lymph",
+        "PRE_axillary_lymphadenopathy",
+        "PRE_internal_mammary_lymphaden",
+        "PRE_axillary_lymphadenopathy_p",
+        "PRE_int_mammary_lymphade_pet",
+        'POS_did_the_patient_receive_pm'
+    ]
+    alan_picked_df = df_cleansed[alan_picked_cols]
+    custom_to_csv(
+        alan_picked_df,
+        output_dir,
+        "PRE-alan-heuristic.csv",
+    )
     # Generate expert-picked unimputed columns DF
     expert_picked_cols = [
         'PRE_record_id',
         'PRE_men_status',
         'PRE_tumor_size_mm',
         'PRE_tumor_grade',
+        'PRE_tumor_location',
         'PRE_metastatic_carcinoma_on_ax',
         'PRE_lymphovascular_invasion0',
         'PRE_pr_status',
@@ -78,20 +102,25 @@ if __name__ == "__main__":
         'PRE_her_status',
         'PRE_abnormal_ln_present',
         'PRE_abnormal_ln_size',
+        "PRE_abnormal_lymph",
         'PRE_axillary_lymph_node_palpab',
         'PRE_prominent_axillary_lymph',
+        "PRE_axillary_lymphadenopathy",
+        "PRE_internal_mammary_lymphaden",
+        "PRE_axillary_lymphadenopathy_p",
         'PRE_internal_mammary_lymph_nod',
+        "PRE_int_mammary_lymphade_pet",
         'PRE_axillary_lymph_node_max_si',
         'PRE_lymph_node_max_size_mm0',
         'PRE_img_size',
         'POS_did_the_patient_receive_pm'
     ]
-    expert_picked_df = df_cleansed[expert_picked_cols]
-    custom_to_csv(
-        expert_picked_df,
-        output_dir,
-        "PRE-expert-unimputed.csv"
-    )
+    # expert_picked_df = df_cleansed[expert_picked_cols]
+    # custom_to_csv(
+    #     expert_picked_df,
+    #     output_dir,
+    #     "PRE-expert-unimputed.csv"
+    # )
     # Generate expert-picked-imputed columns DF
     expert_picked_imputed_df = df_expert_imputed[expert_picked_cols]
     custom_to_csv(
