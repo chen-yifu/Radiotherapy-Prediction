@@ -3,6 +3,9 @@ from tqdm import tqdm
 
 
 def cleanse_dataset(df, metadata_df):
+    """
+    # TODO fix issue with tumor_location being converted from 11:30 -> 1130
+    """
     my_print_header("Dataset Cleansing...")
     cleansed_locs = {}
     global row, val, orig_val

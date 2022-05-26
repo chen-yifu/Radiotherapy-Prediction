@@ -4,7 +4,7 @@ import os
 from regex import F
 
 global out_dir, input_dir
-output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/May19 Datasets for Experiments Table (includes Alan's Heuritsic)"
+output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/May26 Datasets for Experiments Table (enhanced expert cols)"
 input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-05-16-235040/DataFrames"
 
 df_idx = 0
@@ -89,6 +89,43 @@ if __name__ == "__main__":
         "PRE-alan-heuristic.csv",
     )
     # Generate expert-picked unimputed columns DF
+    expert_picked_cols_enhanced = [
+        'PRE_record_id',
+        'PRE_age_at_dx',
+        'PRE_men_status',
+        'PRE_tumor_size_mm',
+        'PRE_tumor_grade',
+        'PRE_tumor_stge',
+        'PRE_tumor_location',
+        'PRE_tumor_location_trans',
+        'PRE_metastatic_carcinoma_on_ax',
+        'PRE_lymphovascular_invasion0',
+        'PRE_pr_status',
+        'PRE_er_status',
+        'PRE_her_status',
+        'PRE_systhe___1',
+        'PRE_systhe___2',
+        'PRE_systhe___3',
+        'PRE_systhe___4',
+        'PRE_systhe___5',
+        'PRE_abnormal_ln_present',
+        'PRE_abnormal_ln_size',
+        "PRE_abnormal_lymph",
+        'PRE_margin_status',
+        'PRE_closest_margin',
+        'PRE_closest_margin_trans',
+        'PRE_axillary_lymph_node_palpab',
+        'PRE_prominent_axillary_lymph',
+        "PRE_axillary_lymphadenopathy",
+        "PRE_internal_mammary_lymphaden",
+        "PRE_axillary_lymphadenopathy_p",
+        'PRE_internal_mammary_lymph_nod',
+        "PRE_int_mammary_lymphade_pet",
+        'PRE_axillary_lymph_node_max_si',
+        'PRE_lymph_node_max_size_mm0',
+        'PRE_img_size',
+        'POS_did_the_patient_receive_pm'
+    ]
     expert_picked_cols = [
         'PRE_record_id',
         'PRE_men_status',
@@ -128,6 +165,13 @@ if __name__ == "__main__":
         output_dir,
         "PRE-expert-imputed.csv"
     )
+    
+    expert_picked_enhanced_imputed_df = df_expert_imputed[expert_picked_cols_enhanced]
+    custom_to_csv(
+        expert_picked_enhanced_imputed_df,
+        output_dir,
+        "PRE-expert-imputed-enhanced.csv"
+    )
 
     # Generate the DF containing all the columns picked by experts,
     # And also the columns with sparsities at most x%
@@ -159,7 +203,7 @@ if __name__ == "__main__":
         # Merge DFs, remove duplicate columns by keeping the first one
         df_sparsity = pd.merge(
             df_sparsity,
-            expert_picked_imputed_df,
+            expert_picked_enhanced_imputed_df,
             on="PRE_record_id",
             how="outer",
             suffixes=('', '_duplicate')
