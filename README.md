@@ -21,6 +21,7 @@ To run tests:
 To display logs (with color-coded texts):
 `cat data/preprocessed/<OUTPUT_TIMESTAMP>/log.txt`
 
+To compare the human-reviewed dataset and original dataset: `python scripts/compare_datasets.py`
 ## Preprocessing Module
 1. *Column Renaming*. Prefix "PRE_", "INT_", and "POS_" to indacate pre-operative, intra-operative, and post-operative columns.
 2. *Dataset Cleansing*. Systematically replacing noisy values using predetermined rules.
