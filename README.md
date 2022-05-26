@@ -1,27 +1,23 @@
 # Radiotherapy-Prediction
 Predict the probability of a patient requiring post-mastectomy radiotherapy
 
-To run the pipeline:
-`python3 main.py`
+To run the pipeline: `python3 main.py`
 
-To run the pipeline in debug mode:
-`python3 main.py --debug`
+To run the pipeline in debug mode: `python3 main.py --debug`
 
-To run the pipeline with previously-found best models:
-`python3 main.py -f `
-To visualize data:
-`python3 src/visualize/visualizer.py`
+To run the pipeline with previously-found best models: `python3 main.py -f `
 
-To visualize all columns:
-`python3 src/visualize/visualizer.py -vizall`
+To visualize data: `python3 src/visualize/visualizer.py`
 
-To run tests:
-`python -m pytest tests/`
+To visualize all columns: `python3 src/visualize/visualizer.py -vizall`
+
+To run tests: `python -m pytest tests/`
 
 To display logs (with color-coded texts):
 `cat data/preprocessed/<OUTPUT_TIMESTAMP>/log.txt`
 
 To generate subsets of the original dataset using specific subsets of columns: `python scripts/generate_datasets.py`
+
 To compare the human-reviewed dataset and original dataset: `python scripts/compare_datasets.py`
 ## Preprocessing Module
 1. *Column Renaming*. Prefix "PRE_", "INT_", and "POS_" to indacate pre-operative, intra-operative, and post-operative columns.
