@@ -6,5 +6,6 @@
     "**/*.pyc": true,
     "**/__pycache__": true,
     "**/__pycache__.*": true
-  }
+  },
+  "cornflakes.linter.run": "onType"
 }
