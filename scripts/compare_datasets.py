@@ -193,6 +193,7 @@ if __name__ == "__main__":
     print("Top 10 missingness:")
     for i in range(min(10, len(sorted_diff_dict))):
         print(f"{sorted_diff_dict[i][0]}: {sorted_diff_dict[i][1]}")
+
     # # Plot the differences
     # sns.set(style="whitegrid")
     # sns.pairplot(diff_df, diag_kind="kde")
