@@ -2,7 +2,7 @@ imputation_dict = {
     ### PRE-OPERATIVE COLUMNS
 #     "bi_rads_score": "",
 #     "tumor_stge": "",
-    "abnormal_lymph": 3,
+    "susp_LN_presnt_composite": 3,
     "axillary_lymph_node_palpab": 0,
     "lymph_node_max_size_mm": 0,
     "extent_of_calcification_ma": 0,
