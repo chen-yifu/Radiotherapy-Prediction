@@ -24,14 +24,14 @@ def engineer_features(
     # Construct new columns from existing data
     my_print_header("Feature Engineering...")
     abnormal_ln_cols = [
-        'PRE_abnormal_lymph',
+        'PRE_susp_LN_presnt_composite',
         'PRE_prominent_axillary_lymph',
         'PRE_axillary_lymphadenopathy',
         'PRE_internal_mammary_lymphaden',
         'PRE_axillary_lymphadenopathy_p',
         'PRE_int_mammary_lymphade_pet'
         ]
-    abnormal_ln_size_cols = [
+    susp_LN_size_composite_cols = [
         'PRE_lymph_node_max_size_mm',
         'PRE_lymph_node_max_size_mm0',
         'PRE_axillary_lymph_node_max_si',
@@ -39,8 +39,8 @@ def engineer_features(
         ]
 
     age_at_dxs = []
-    abnormal_ln_sizes = []
-    abnormal_ln_presents = []
+    susp_LN_size_composites = []
+    susp_LN_prsnt_composites = []
 
     # Remove "ANN" prefix from record_id
     df['PRE_record_id'] = df['PRE_record_id'].apply(
@@ -56,24 +56,24 @@ def engineer_features(
         else:
             years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
             age_at_dxs.append(years_elapsed)
-        # Construct "abnormal_ln_size" as the maximum LN abnormality size
+        # Construct "susp_LN_size_composite" as the maximum LN abnormality size
         max_size = 0
-        for col in abnormal_ln_size_cols:
+        for col in susp_LN_size_composite_cols:
             value = row[col]
             if str(value) == "nan":
                 continue
             max_size = max(max_size, value)
-        abnormal_ln_sizes.append(max_size)
-        # Construct "abnormal_ln_present" to be the presence of abnormal LN
-        abnormal_ln_present = 3
+        susp_LN_size_composites.append(max_size)
+        # Construct "susp_LN_prsnt_composite" to be the presence of abnormal LN
+        susp_LN_prsnt_composite = 3
         for col in abnormal_ln_cols:
             value = row[col]
             if str(value) == "nan":
                 continue
             else:
                 if str(value).strip().replace(".0", "") == "1":
-                    abnormal_ln_present = 1
-        abnormal_ln_presents.append(abnormal_ln_present)
+                    susp_LN_prsnt_composite = 1
+        susp_LN_prsnt_composites.append(susp_LN_prsnt_composite)
 
     df.insert(
         list(df.columns).index("PRE_dob")+1,
@@ -82,13 +82,13 @@ def engineer_features(
         )
     df.insert(
         list(df.columns).index("PRE_lymph_node_max_size_mm")+1,
-        "PRE_abnormal_ln_size",
-        abnormal_ln_sizes
+        "PRE_susp_LN_size_composite",
+        susp_LN_size_composites
         )
     df.insert(
-        list(df.columns).index("PRE_abnormal_lymph")+1,
-        "PRE_abnormal_ln_present",
-        abnormal_ln_presents
+        list(df.columns).index("PRE_susp_LN_presnt_composite")+1,
+        "PRE_susp_LN_prsnt_composite",
+        susp_LN_prsnt_composites
         )
 
     # Converet all string cells to numeric
@@ -102,7 +102,7 @@ def engineer_features(
     my_print("Converted all strings to numeric, and used NaN if impossible.")
     my_print(
         "✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
-        "'PRE_abnormal_ln_size', and 'PRE_abnormal_ln_present'."
+        "'PRE_susp_LN_size_composite', and 'PRE_susp_LN_prsnt_composite'."
     )
 
     return df

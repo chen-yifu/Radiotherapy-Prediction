@@ -3,7 +3,7 @@ import pandas as pd
 imputation_dict = {
 #     "bi_rads_score": "",
 #     "tumor_stge": "",
-    "abnormal_lymph": 2,
+    "susp_LN_presnt_composite": 2,
     "lymph_node_max_size_mm": 0,
     "extent_of_calcification_ma": 0,
     "prominent_axillary_lymph": 2,

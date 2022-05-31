@@ -3,6 +3,7 @@ A script to visualize the differences between the original Excel spreadsheet,
 and another spreadsheet that contains differences.
 """
 # Import libraries for reading data and plotting
+from collections import defaultdict
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,6 +15,7 @@ import re
 # Set printing options with no limits
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
+pd.set_option('expand_frame_repr', False)
 
 original_path = "data/manual_review/RadiationAndANN_DATA_2021-11-15_0835.csv"
 review_path = "data/manual_review/50_Cases_Dana_Reviewed.xlsx"
@@ -97,6 +99,8 @@ if __name__ == "__main__":
     tot_num_diff = 0
     tot_num_miss = 0
     diff_dict = {}
+    # Schema for diff_lcos: {col_name: [(record_id, orig_val, diff_val), ...]}
+    diff_locs = defaultdict(list)
     for col in original_df.columns:
         if col == "record_id":
             diff_df[col] = reviewed_df[col]
@@ -107,6 +111,7 @@ if __name__ == "__main__":
         # "original_value [reviewed_value]" in the position
         # where the values differ
         for i in range(original_df.shape[0]):
+            cell_is_diff = False
             record_id = original_df.iloc[i]["record_id"]
             # Get the rows by record_id
             original_row = original_df.loc[
@@ -136,6 +141,7 @@ if __name__ == "__main__":
                         f"[{reviewed_df[col].iloc[i]}]"
                     )
                     diff_record_ids.append(record_id)
+                    cell_is_diff = True
                 else:
                     diff_strs.append("")
             else:
@@ -146,8 +152,17 @@ if __name__ == "__main__":
                         f"[{reviewed_df.iloc[i][col]}]"
                     )
                     diff_record_ids.append(record_id)
+                    cell_is_diff = True
                 else:
                     diff_strs.append("")
+            if cell_is_diff:
+                diff_locs[col].append(
+                    (
+                        record_id,
+                        original_row[col].values[0],
+                        reviewed_row[col].values[0]
+                    )
+                )
         # If the original value is substring of square bracket,
         # treat it as the same value
         diff_strs_filtered = []
@@ -159,10 +174,10 @@ if __name__ == "__main__":
             sq_br_val = sq_br_val.group(1)
             # Get the value from beginning until the first square bracket
             orig_val = diff_str.split("[")[0].strip()
-            # print(f"orig_val: {orig_val}, sq_br_val: {sq_br_val}, diff_str: {diff_str}")
-            if str(sq_br_val) != "nan" and len(sq_br_val) \
-                    and str(orig_val) != "nan" and len(orig_val) \
-                    and (sq_br_val in diff_str or diff_str in sq_br_val):
+            if str(sq_br_val) != "nan" and len(str(sq_br_val)) \
+                    and str(orig_val) != "nan" and len(str(orig_val)) \
+                    and ((str(sq_br_val) in str(orig_val)) or (str(orig_val) in str(sq_br_val))):
+                # print(col, "sq_br_val == orig_val", sq_br_val, orig_val)
                 diff_str = ""
             diff_strs_filtered.append(diff_str)
         assert len(diff_strs_filtered) == len(diff_strs)
@@ -182,8 +197,6 @@ if __name__ == "__main__":
     print("Saved differences to {}".format(output_path))
     print("The total number of entries in DataFrame is:"
           f"{len(diff_df) * (len(diff_df.columns)-1)}")
-    print(f"There are {tot_num_diff} different entries in the DataFrames")
-    print(f"There are {tot_num_miss} missing entries in the DataFrames")
     # Sort diff_dict by number of missingness, and print out the top 10
     sorted_diff_dict = sorted(
         diff_dict.items(),
@@ -194,9 +207,47 @@ if __name__ == "__main__":
     for i in range(min(10, len(sorted_diff_dict))):
         print(f"{sorted_diff_dict[i][0]}: {sorted_diff_dict[i][1]}")
 
-    # # Plot the differences
-    # sns.set(style="whitegrid")
-    # sns.pairplot(diff_df, diag_kind="kde")
-    # plt.show()
-    # # Save the differences to a new CSV file
+    # Print out the locations of different entries for each column
+    print("-"*80)
+    print("Location of different entries:")
+    num_locs = 0
+    # Filter diff_locs
+    for _, loc in diff_locs.items():
+        locs_to_remove = []
+        for i in range(len(loc)):
+            record_id, orig_val, diff_val = loc[i]
+            orig_val, diff_val = str(orig_val), str(diff_val)
+            if diff_val != "nan" and len(diff_val) \
+                and orig_val != "nan" and len(orig_val) \
+                    and (diff_val in orig_val or orig_val in diff_val):
+                # Not truly different; Remove the entry
+                locs_to_remove.append(i)
+        for i in reversed(locs_to_remove):
+            del loc[i]
+    # Create a dataframe with columns: Column | record_id | Original | Reviewed
+    loc_df = pd.DataFrame(columns=["Column", "record_id", "Original", "Reviewed"])
+    for col in diff_locs:
+        if not diff_locs[col]:
+            continue
+        for loc in diff_locs[col]:
+            record_id = loc[0]
+            orig_val = loc[1]
+            diff_val = loc[2]
+            if str(orig_val) == "nan":
+                continue
+            else:
+                loc_df = pd.concat(
+                    [loc_df,
+                     pd.DataFrame(
+                        [[col, record_id, orig_val, diff_val]],
+                        columns=["Column", "record_id", "Original", "Reviewed"]
+                        )]
+                )
+                num_locs += 1
+    # Print the dataframe, excluding the index
+    print(loc_df.to_string(index=False))
+    print("-"*80)
+    print(f"Number of different entries: {num_locs}")
+    print(f"Number of different entries in total: {tot_num_diff}")
+    print(f"Number of missing entries: {tot_num_miss}")
 
