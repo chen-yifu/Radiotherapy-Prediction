@@ -1,4 +1,4 @@
-# Radiotherapy-Prediction
+# Machine Learning for Radiotherapy Prediction
 An end-to-end machine learning pipeline for predicting the need of post-mastectomy radiotherapy before breast cancer pathology diagnosis.
 
 ## Table of Contents
@@ -8,11 +8,12 @@ An end-to-end machine learning pipeline for predicting the need of post-mastecto
 * [Pipeline](#pipeline)
     * [Data Preprocessing Module](#data-preprocessing-module)
     * [ML Training-Evaluation Module](#ml-training-evaluation-module)
-* [Figures](#results)
-    * [AUC Performance Metrics](#auc-performance-metrics)
-    * [Feature Importance and Feature Selection](#feature-importance-and-feature-selection)
-* [Tables](#tables)
-    * [Feature Scores by Model](#feature-scores-by-model)
+* [Results](#results)
+    * [Figures](#figures)
+        * [AUC Performance Metrics](#auc-performance-metrics)
+        * [Feature Importance and Feature Selection](#feature-importance-and-feature-selection)
+    * [Tables](#tables)
+        * [Feature Scores by Model](#feature-scores-by-model)
 
 ## Introduction
 Breast cancer patients experience higher quality of life if reconstruction of the breast tissue is done after the mastectomy. However, for patients requiring post-mastectomy radiotherapy, immediate breast reconstruction is not always the best option.
