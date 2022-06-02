@@ -250,4 +250,6 @@ if __name__ == "__main__":
     print(f"Number of different entries: {num_locs}")
     print(f"Number of different entries in total: {tot_num_diff}")
     print(f"Number of missing entries: {tot_num_miss}")
+    # Save loc_df
+    loc_df.to_excel(output_path.replace(".xlsx", "_Only.xlsx"))
 
