@@ -170,7 +170,7 @@ if __name__ == "__main__":
     custom_to_csv(
         expert_picked_enhanced_imputed_df,
         output_dir,
-        "PRE-expert-imputed-enhanced.csv"
+        "PRE-expert-picked.csv"
     )
 
     # Generate the DF containing all the columns picked by experts,
