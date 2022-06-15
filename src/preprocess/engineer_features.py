@@ -24,7 +24,7 @@ def engineer_features(
     # Construct new columns from existing data
     my_print_header("Feature Engineering...")
     abnormal_ln_cols = [
-        'PRE_susp_LN_presnt_composite',
+        'PRE_abnormal_lymph',
         'PRE_prominent_axillary_lymph',
         'PRE_axillary_lymphadenopathy',
         'PRE_internal_mammary_lymphaden',
