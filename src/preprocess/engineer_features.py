@@ -62,6 +62,7 @@ def engineer_features(
         else:
             years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
             age_at_dxs.append(years_elapsed)
+            print(f"{row['PRE_record_id']} age_at_dx: {years_elapsed}, dob: {dob}, dx_date: {dx_date}")
         # Construct "susp_LN_size_composite" as the maximum LN abnormality size
         max_size = 0
         for col in susp_LN_size_composite_cols:
@@ -104,7 +105,7 @@ def engineer_features(
         susp_LN_size_composites
         )
     df.insert(
-        list(df.columns).index("PRE_susp_LN_presnt_composite")+1,
+        list(df.columns).index("PRE_abnormal_lymph")+1,
         "PRE_susp_LN_prsnt_composite",
         susp_LN_prsnt_composites
         )
