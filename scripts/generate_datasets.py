@@ -4,8 +4,12 @@ import os
 from regex import F
 
 global out_dir, input_dir
-output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/May26 Datasets for Experiments Table (enhanced expert cols)"
-input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-05-16-235040/DataFrames"
+output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/Jun16 Datasets for Experiments Table (enhanced expert cols)"
+input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-06-15-214322/DataFrames/"
+
+# Create output directory if not exists
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 df_idx = 0
 
@@ -74,7 +78,7 @@ if __name__ == "__main__":
     print(f"Column sparsities: {col_sparsities}")
     # Generate Alan's Heuristic DF
     alan_picked_cols = [
-        "PRE_susp_LN_presnt_composite",
+        "PRE_susp_LN_prsnt_composite",
         "PRE_prominent_axillary_lymph",
         "PRE_axillary_lymphadenopathy",
         "PRE_internal_mammary_lymphaden",
@@ -111,7 +115,7 @@ if __name__ == "__main__":
         'PRE_systhe___5',
         'PRE_susp_LN_prsnt_composite',
         'PRE_susp_LN_size_composite',
-        "PRE_susp_LN_presnt_composite",
+        "PRE_susp_LN_prsnt_composite",
         'PRE_margin_status',
         'PRE_closest_margin',
         'PRE_closest_margin_trans',
@@ -141,7 +145,7 @@ if __name__ == "__main__":
         'PRE_her_status',
         'PRE_susp_LN_prsnt_composite',
         'PRE_susp_LN_size_composite',
-        "PRE_susp_LN_presnt_composite",
+        "PRE_susp_LN_prsnt_composite",
         'PRE_axillary_lymph_node_palpab',
         'PRE_prominent_axillary_lymph',
         "PRE_axillary_lymphadenopathy",

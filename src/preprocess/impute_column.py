@@ -552,9 +552,9 @@ def impute_column(
         my_print(f"Using the following columns to impute {column_name}:")
         my_print(", ".join(base_cols_df.columns), plain=True)
         if config.debug_mode:
-            KNN_n_neighbors_range = [3, 5]
-            RF_n_estimators_range = [10, 30]
-            RF_max_depth_range = [2, 4]
+            KNN_n_neighbors_range = [3, 10]
+            RF_n_estimators_range = [5, 10]
+            RF_max_depth_range = [1, 2]
         else:
             # [3, 5, 9, 15, 23, 33, 45, 59]  # range(3, 19, 2)
             KNN_n_neighbors_range = [3, 5, 9, 15, 23, 33]
