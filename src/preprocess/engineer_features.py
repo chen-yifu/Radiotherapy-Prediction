@@ -37,10 +37,16 @@ def engineer_features(
         'PRE_axillary_lymph_node_max_si',
         'PRE_internal_mammary_lymph_nod'
         ]
-
+ 
+    pre_tumor_max_size_composite_cols = [
+        "PRE_img_size",  # Ultrasound, in MM
+        "PRE_tumor_size_mm",  # Mammography, in MM
+        "PRE_size_of_the_largest_foci_c",  # PET, in CM
+        ]
     age_at_dxs = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
+    tumor_max_size_composites = []
 
     # Remove "ANN" prefix from record_id
     df['PRE_record_id'] = df['PRE_record_id'].apply(
@@ -64,6 +70,7 @@ def engineer_features(
                 continue
             max_size = max(max_size, value)
         susp_LN_size_composites.append(max_size)
+        
         # Construct "susp_LN_prsnt_composite" to be the presence of abnormal LN
         susp_LN_prsnt_composite = 3
         for col in abnormal_ln_cols:
@@ -74,6 +81,17 @@ def engineer_features(
                 if str(value).strip().replace(".0", "") == "1":
                     susp_LN_prsnt_composite = 1
         susp_LN_prsnt_composites.append(susp_LN_prsnt_composite)
+        
+        tumor_max_site_composite = 0
+        for col in pre_tumor_max_size_composite_cols:
+            value = row[col]
+            if str(value) == "nan":
+                continue
+            else:
+                if col == "PRE_size_of_the_largest_foci_c":
+                    value = value * 10
+                tumor_max_site_composite = max(tumor_max_site_composite, value)
+        tumor_max_size_composites.append(tumor_max_site_composite)
 
     df.insert(
         list(df.columns).index("PRE_dob")+1,
@@ -90,6 +108,12 @@ def engineer_features(
         "PRE_susp_LN_prsnt_composite",
         susp_LN_prsnt_composites
         )
+    
+    df.insert(
+        list(df.columns).index("PRE_img_size")+1,
+        "PRE_tumor_max_size_composite",
+        tumor_max_size_composites
+        )
 
     # Converet all string cells to numeric
     df = df.apply(pd.to_numeric, errors='coerce')
@@ -102,7 +126,7 @@ def engineer_features(
     my_print("Converted all strings to numeric, and used NaN if impossible.")
     my_print(
         "✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
-        "'PRE_susp_LN_size_composite', and 'PRE_susp_LN_prsnt_composite'."
+        "'PRE_susp_LN_size_composite',  'PRE_susp_LN_prsnt_composite', and 'PRE_tumor_max_size_composite'"
     )
 
     return df
