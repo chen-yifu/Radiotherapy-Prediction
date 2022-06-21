@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 
-from regex import F
 
 global out_dir, input_dir
 output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/Jun16 Datasets for Experiments Table (enhanced expert cols)"
