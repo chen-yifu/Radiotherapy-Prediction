@@ -1,30 +1,38 @@
 # Machine Learning for Radiotherapy Prediction
-An end-to-end machine learning pipeline for predicting the need of post-mastectomy radiotherapy before breast cancer pathology diagnosis.
-
+---
 ## Table of Contents
-* [Introduction](#introduction)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Pipeline](#pipeline)
-    * [Data Preprocessing Module](#data-preprocessing-module)
-    * [ML Training-Evaluation Module](#ml-training-evaluation-module)
-* [Results](#results)
-    * [Figures](#figures)
-        * [AUC Performance Metrics](#auc-performance-metrics)
-        * [Feature Importance and Feature Selection](#feature-importance-and-feature-selection)
-    * [Tables](#tables)
-        * [Feature Scores by Model](#feature-scores-by-model)
+<!-- - [Machine Learning for Radiotherapy Prediction](#machine-learning-for-radiotherapy-prediction) -->
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [An End-to-End ML Pipeline](#an-end-to-end-ml-pipeline)
+    - [Pipeline Overview Diagram](#pipeline-overview-diagram)
+    - [Data Preprocessing Module](#data-preprocessing-module)
+    - [ML Training-Evaluation Module](#ml-training-evaluation-module)
+  - [Results](#results)
+    - [Figures](#figures)
+      - [AUC Performance Metrics](#auc-performance-metrics)
+      - [Feature Importance and Feature Selection](#feature-importance-and-feature-selection)
+    - [Tables](#tables)
+      - [Feature Scores by Model (Example)](#feature-scores-by-model-example)
+  - [Miscellaneous Notes](#miscellaneous-notes)
+    - [Feature Engineering Using A Sentinel LN Nomogram](#feature-engineering-using-a-sentinel-ln-nomogram)
 
 ## Introduction
-Breast cancer patients experience higher quality of life if reconstruction of the breast tissue is done after the mastectomy. However, for patients requiring post-mastectomy radiotherapy, immediate breast reconstruction is not always the best option.
-Since it is difficult to predict the need of post-mastectomy radiotherapy, we applied machine learning on a dataset containing 115 clinical features/variables. The features include the following: demographic, preoperative, intraoperative, and postoperative information. The target variable is the need of post-mastectomy radiotherapy.
+---
+This is an end-to-end machine learning pipeline for predicting the need of post-mastectomy radiotherapy before breast cancer pathology diagnosis.
 
-## Installation
+Many breast cancer requires post-mastectomy reconstruction. However, if a patient also needs post-mastectomy radiotherapy, it's important for the surgeon and the patient to predict such need *before* the mastectomy surgery. Due to the difficulty in these predictions, and the high clinical value of an accurate prediction, we explore the applicability of Machine Learning (ML) methods. 
+
+To build ML models, we curated a dataset containing 115 clinical features/variables spanning across demographic, preoperative, intraoperative, and postoperative information. ML models are trained on this dataset and are used to predict the need of post-mastectomy radiotherapy.
+
+
+## Installation And Usage
+---
 The necessary libraries could be installed with the following command:
 
 `pip install -r requirements.txt` 
-
-## Usage
 
 To run the pipeline: `python3 main.py`
 
@@ -45,11 +53,10 @@ To generate subsets of the original dataset using specific subsets of columns: `
 
 To compare the two versions of the same dataset and obtain the differences: `python scripts/compare_datasets.py`
 
-## Pipeline 
-
+## An End-to-End ML Pipeline 
+---
 ### Pipeline Overview Diagram
-Below is an image of diagram of the pipeline.
-![Pipeline Overview Diagram](plots_tables/RTx Pipeline Diagram.png)
+![Pipeline Overview Diagram](plots_tables/RTx_Pipeline_Diagram.png)
 ### Data Preprocessing Module
 1. *Column Renaming*. Editing the column names of pre-operative, intra-operative, and post-operative features.
 2. *Data     Cleansing*. Systematically replacing noisy values using predetermined rules.
@@ -77,8 +84,7 @@ Below is an image of diagram of the pipeline.
 
 
 ## Results
-
-
+---
 ### Figures
 
 #### AUC Performance Metrics
@@ -90,7 +96,7 @@ Below is an image of diagram of the pipeline.
 
 ### Tables
 
-#### Feature Scores by Model
+#### Feature Scores by Model (Example)
 | Features                          | RF\_rank | LR\_rank | XGB\_rank | RF\_score | LR\_score | XGB\_score | Rank\_Product^(1/3) | Rank\_Product\_Rank |
 | --------------------------------- | -------- | -------- | --------- | --------- | --------- | ---------- | ------------------- | ------------------- |
 | PRE\_axillary\_lymphadenopathy    | 2        | 4        | 1         | 0.23      | 0.48      | 0.36       | 2                   | 1                   |
@@ -99,4 +105,13 @@ Below is an image of diagram of the pipeline.
 | PRE\_axillary\_lymphadenopathy\_p | 3        | 2        | 3         | 0.22      | 0.59      | 0.15       | 2.62                | 4                   |
 | PRE\_prominent\_axillary\_lymph   | 5        | 6        | 5         | 0.09      | 0.08      | 0.07       | 5.31                | 5                   |
 | PRE\_internal\_mammary\_lymphaden | 6        | 5        | 6         | 0.04      | 0.32      | 0.05       | 5.65                | 6                   |
+
+
+## Miscellaneous Notes
+
+
+### Feature Engineering Using A Sentinel LN Nomogram
+An additional feaature was created during the feature engineering step by using a peer-reviewed nomogram for predicting the probability of sentinel lymph node metastasis. The nomogram is available as a [browser-based calculator](https://nomograms.mskcc.org/Breast/BreastSLNodeMetastasisPage.aspx). Their publication can be found on PubMed at [this link](https://pubmed.ncbi.nlm.nih.gov/17664461/).
+
+Below is an instruction on how to use our custom Python script to query the calculator autonomously at scale, to save the hassle of manually entering the values for hundreds of patients.
 
