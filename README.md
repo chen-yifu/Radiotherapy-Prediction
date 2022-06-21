@@ -46,9 +46,13 @@ To generate subsets of the original dataset using specific subsets of columns: `
 To compare the two versions of the same dataset and obtain the differences: `python scripts/compare_datasets.py`
 
 ## Pipeline 
+
+### Pipeline Overview Diagram
+Below is an image of diagram of the pipeline.
+![Pipeline Overview Diagram](plots_tables/RTx Pipeline Diagram.png)
 ### Data Preprocessing Module
 1. *Column Renaming*. Editing the column names of pre-operative, intra-operative, and post-operative features.
-2. *Dataset Cleansing*. Systematically replacing noisy values using predetermined rules.
+2. *Data     Cleansing*. Systematically replacing noisy values using predetermined rules.
 3. *Feature Engineering*. Construct new interaction features guided by clinical insights.
 4. *Missing Value Imputation*. Fill in missing values using imputation strategies and machine learning. For each column:
     1. Determine the type of column as real, ordinal, or categorical
