@@ -29,7 +29,8 @@ def engineer_features(
         'PRE_axillary_lymphadenopathy',
         'PRE_internal_mammary_lymphaden',
         'PRE_axillary_lymphadenopathy_p',
-        'PRE_int_mammary_lymphade_pet'
+        'PRE_int_mammary_lymphade_pet',
+        'axillary_lymph_node_palpab'
         ]
     susp_LN_size_composite_cols = [
         'PRE_lymph_node_max_size_mm',
