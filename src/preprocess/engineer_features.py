@@ -45,6 +45,7 @@ def engineer_features(
         "PRE_size_of_the_largest_foci_c",  # PET, in CM
         ]
     age_at_dxs = []
+    bmis = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
     tumor_max_size_composites = []
@@ -53,7 +54,7 @@ def engineer_features(
     df['PRE_record_id'] = df['PRE_record_id'].apply(
         lambda x: re.sub(r'ANN|L|R', '', x))
 
-    for i, row in tqdm(df.iterrows()):
+    for _, row in tqdm(df.iterrows()):
         # TODO pre_op_biopsy_date_year or surgery_date_year - dob
         # Construct "age_at_dx" as the age at the time of diagnosis
         dob = pd.to_datetime(row["PRE_dob"])
@@ -63,7 +64,17 @@ def engineer_features(
         else:
             years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
             age_at_dxs.append(years_elapsed)
-            print(f"{row['PRE_record_id']} age_at_dx: {years_elapsed}, dob: {dob}, dx_date: {dx_date}")
+            print(f"{row['PRE_record_id']} age_at_dx: "
+                  "{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
+
+        # Construct "bmis" as the BMI using PRE_height_cm and PRE_weight_kg
+        if "nan" in [str(row["PRE_height_cm"]), str(row["PRE_weight_kg"])]:
+            bmis.append(np.nan)
+        else:
+            bmis.append(
+                row["PRE_weight_kg"] / ((row["PRE_height_cm"] / 100) ** 2)
+            )
+
         # Construct "susp_LN_size_composite" as the maximum LN abnormality size
         max_size = 0
         for col in susp_LN_size_composite_cols:
@@ -72,7 +83,7 @@ def engineer_features(
                 continue
             max_size = max(max_size, value)
         susp_LN_size_composites.append(max_size)
-        
+
         # Construct "susp_LN_prsnt_composite" to be the presence of abnormal LN
         susp_LN_prsnt_composite = 3
         for col in abnormal_ln_cols:
@@ -83,7 +94,7 @@ def engineer_features(
                 if str(value).strip().replace(".0", "") == "1":
                     susp_LN_prsnt_composite = 1
         susp_LN_prsnt_composites.append(susp_LN_prsnt_composite)
-        
+
         tumor_max_site_composite = 0
         for col in pre_tumor_max_size_composite_cols:
             value = row[col]
@@ -95,6 +106,7 @@ def engineer_features(
                 tumor_max_site_composite = max(tumor_max_site_composite, value)
         tumor_max_size_composites.append(tumor_max_site_composite)
 
+        
     df.insert(
         list(df.columns).index("PRE_dob")+1,
         "PRE_age_at_dx",
