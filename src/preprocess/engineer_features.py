@@ -30,7 +30,7 @@ def engineer_features(
         'PRE_internal_mammary_lymphaden',
         'PRE_axillary_lymphadenopathy_p',
         'PRE_int_mammary_lymphade_pet',
-        'axillary_lymph_node_palpab'
+        'PRE_axillary_lymph_node_palpab'
         ]
     susp_LN_size_composite_cols = [
         'PRE_lymph_node_max_size_mm',
@@ -106,11 +106,15 @@ def engineer_features(
                 tumor_max_site_composite = max(tumor_max_site_composite, value)
         tumor_max_size_composites.append(tumor_max_site_composite)
 
-        
     df.insert(
         list(df.columns).index("PRE_dob")+1,
         "PRE_age_at_dx",
         age_at_dxs
+        )
+    df.insert(
+        list(df.columns).index("PRE_height_cm")+1,
+        "PRE_bmi",
+        bmis
         )
     df.insert(
         list(df.columns).index("PRE_lymph_node_max_size_mm")+1,
@@ -122,12 +126,14 @@ def engineer_features(
         "PRE_susp_LN_prsnt_composite",
         susp_LN_prsnt_composites
         )
-    
     df.insert(
         list(df.columns).index("PRE_img_size")+1,
         "PRE_tumor_max_size_composite",
         tumor_max_size_composites
         )
+
+    # Construct nomogram feature
+    
 
     # Converet all string cells to numeric
     df = df.apply(pd.to_numeric, errors='coerce')
@@ -139,8 +145,9 @@ def engineer_features(
 
     my_print("Converted all strings to numeric, and used NaN if impossible.")
     my_print(
-        "✅ Feature Engineering - Added new feature 'PRE_age_at_dx',"
-        "'PRE_susp_LN_size_composite',  'PRE_susp_LN_prsnt_composite', and 'PRE_tumor_max_size_composite'"
+        "✅ Feature Engineering - Added new feature 'PRE_age_at_dx', 'PRE_bmi'"
+        "'PRE_susp_LN_size_composite',  'PRE_susp_LN_prsnt_composite', "
+        "'PRE_tumor_max_size_composite'"
     )
 
     return df
