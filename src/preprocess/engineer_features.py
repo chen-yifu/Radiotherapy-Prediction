@@ -20,7 +20,8 @@ def engineer_features(
     Returns:
         pd.DataFrame: DataFrame with engineered features
     """
-
+    # TODO add transformation for margin and tumor location
+    
     # Construct new columns from existing data
     my_print_header("Feature Engineering...")
     abnormal_ln_cols = [
@@ -45,6 +46,7 @@ def engineer_features(
         "PRE_size_of_the_largest_foci_c",  # PET, in CM
         ]
     age_at_dxs = []
+    age_at_surg = []
     bmis = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
@@ -65,8 +67,18 @@ def engineer_features(
             years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
             age_at_dxs.append(years_elapsed)
             print(f"{row['PRE_record_id']} age_at_dx: "
-                  "{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
-
+                  f"{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
+        
+        # Construct "age_at_surg"
+        surg_date = pd.to_datetime(row["PRE_surgery_date"])
+        if str(surg_date) == "nan":
+            age_at_surg.append(np.nan)
+        else:
+            years_elapsed = abs(round((surg_date - dob).days / 365.25, 2))
+            age_at_surg.append(years_elapsed)
+            print(f"{row['PRE_record_id']} age_at_surg: "
+                  f"{years_elapsed}, dob: {dob}, surg_date: {surg_date}")
+        
         # Construct "bmis" as the BMI using PRE_height_cm and PRE_weight_kg
         if "nan" in [str(row["PRE_height_cm"]), str(row["PRE_weight_kg"])]:
             bmis.append(np.nan)
@@ -95,7 +107,7 @@ def engineer_features(
                     susp_LN_prsnt_composite = 1
         susp_LN_prsnt_composites.append(susp_LN_prsnt_composite)
 
-        tumor_max_site_composite = 0
+        tumor_max_size_composite = np.nan
         for col in pre_tumor_max_size_composite_cols:
             value = row[col]
             if str(value) == "nan":
@@ -103,13 +115,21 @@ def engineer_features(
             else:
                 if col == "PRE_size_of_the_largest_foci_c":
                     value = value * 10
-                tumor_max_site_composite = max(tumor_max_site_composite, value)
-        tumor_max_size_composites.append(tumor_max_site_composite)
+                if tumor_max_size_composite is np.nan:
+                    tumor_max_size_composite = value
+                else:
+                    tumor_max_size_composite = max(tumor_max_size_composite, value)
+        tumor_max_size_composites.append(tumor_max_size_composite)
 
     df.insert(
         list(df.columns).index("PRE_dob")+1,
         "PRE_age_at_dx",
         age_at_dxs
+        )
+    df.insert(
+        list(df.columns).index("PRE_age_at_dx")+1,
+        "PRE_age_at_surg",
+        age_at_surg
         )
     df.insert(
         list(df.columns).index("PRE_height_cm")+1,

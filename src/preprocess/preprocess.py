@@ -67,7 +67,7 @@ def preprocess(
 
     # Shuffle the rows in DataFrame
     df = df.sample(frac=1, random_state=0).reset_index(drop=True)
-
+    
     if debug_mode:
         df = df.iloc[:50, :]
 
