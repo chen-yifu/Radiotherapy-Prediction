@@ -34,24 +34,34 @@ The necessary libraries could be installed with the following command:
 
 `pip install -r requirements.txt` 
 
-To run the pipeline: `python3 main.py`
+### Usage Overview
+The entire data flow begins with the preprocessing of the raw data, which includes feature engineering, missing value imputation, and data normalization. The dataset could be visualized for qualitative inspection. Then the dataset is split into subsets for training and testing. The dataset is also split via subsets of columns (pre-operative variables only, both pre-and-post-operative variables, etc.). The next step is to train a ML model on dataset and evaluate its performance using cross validation. Finally, we evaluate the model performance on the unseen hold-out test dataset.
 
-To run the pipeline in debug mode: `python3 main.py --debug`
+### Usage Commands
 
-To run the pipeline with previously-found best models: `python3 main.py -f `
-
-To visualize data: `python3 src/visualize/visualizer.py`
-
-To visualize all columns: `python3 src/visualize/visualizer.py -vizall`
-
-To run tests: `python -m pytest tests/`
-
-To display logs (with color-coded texts):
+- To run the pre-processing pipeline
+  - in production mode with training new models: `python3 main.py`
+  - in production mode with previously-trained best models: `python3 main.py -f `
+  - in debug mode: `python3 main.py --debug`
+  - run tests: `python -m pytest tests/`
+  - To display logs (with color-highlighting):
 `cat data/preprocessed/<OUTPUT_TIMESTAMP>/log.txt`
 
-To generate subsets of the original dataset using specific subsets of columns: `python scripts/generate_datasets.py`
+- To visualize data
+  - use the notebook at: `notebooks/RTx Data Exploration.ipynb`
+  - or the command-prompt plotting tool: `python3 src/visualize/visualizer.py`
+    - use `-vizall` flag to plot all columns: `python3 src/visualize/visualizer.py -vizall`
 
-To compare the two versions of the same dataset and obtain the differences: `python scripts/compare_datasets.py`
+
+- To generate subsets of the original dataset using specific subsets of columns: `python scripts/generate_datasets.py`
+
+- To compare the two versions of the same dataset and obtain the differences: `python scripts/compare_datasets.py`
+
+- To run model prediction, use the notebook at: `src/predict/predict_python_new.ipynb` 
+
+- Other miscellaneous notebooks:
+  - Using automated form-filling to perform feature engineering using monogram website: `notebooks/Apply Nomogram.ipynb`
+
 
 ## An End-to-End ML Pipeline 
 ---
@@ -113,5 +123,7 @@ To compare the two versions of the same dataset and obtain the differences: `pyt
 ### Feature Engineering Using A Sentinel LN Nomogram
 An additional feaature was created during the feature engineering step by using a peer-reviewed nomogram for predicting the probability of sentinel lymph node metastasis. The nomogram is available as a [browser-based calculator](https://nomograms.mskcc.org/Breast/BreastSLNodeMetastasisPage.aspx). Their publication can be found on PubMed at [this link](https://pubmed.ncbi.nlm.nih.gov/17664461/).
 
-Below is an instruction on how to use our custom Python script to query the calculator autonomously at scale, to save the hassle of manually entering the values for hundreds of patients.
+We used a custom Python script to query the online webform autonomously, to avoid manually entering the values for hundreds of patients, which is both error-prone and time-consuming. Below is a demo screenshot of the script in action (based on fake demo data):
+
+![Sentinel LN Nomogram](README_figures/nomogram_script.gif)
 

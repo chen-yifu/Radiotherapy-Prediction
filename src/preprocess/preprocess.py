@@ -30,7 +30,8 @@ def preprocess(
     very_solid_threshold: float = 0.05,
     solid_threshold: float = 0.20,
     metadata_path: str = "data/input/metadata/Metadata.xlsx",
-    df_path: str = "data/input/AllTranTrainVal.csv",
+    # df_path: str = "data/input/AllTranTrainVal.csv",
+    df_path: str = "data/input/RadiationAndANN_DATA_2021-11-15_0835.csv",
     use_solid_cols: bool = True
 ) -> None:
     """

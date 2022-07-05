@@ -52,10 +52,14 @@ def engineer_features(
     susp_LN_prsnt_composites = []
     tumor_max_size_composites = []
 
+    
     # Remove "ANN" prefix from record_id
     df['PRE_record_id'] = df['PRE_record_id'].apply(
         lambda x: re.sub(r'ANN|L|R', '', x))
 
+    # Converet all string cells to numeric
+    df = df.apply(pd.to_numeric, errors='coerce')
+    
     for _, row in tqdm(df.iterrows()):
         # TODO pre_op_biopsy_date_year or surgery_date_year - dob
         # Construct "age_at_dx" as the age at the time of diagnosis
