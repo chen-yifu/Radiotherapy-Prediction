@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from dateutil.relativedelta import relativedelta
 from utils.find_column_type import is_integral_type
-from utils.io import my_print, my_print_header, save_experiment_df
+from utils.io import print_and_log, print_and_log_w_header, save_experiment_df
 import re
 
 
@@ -20,10 +20,23 @@ def engineer_features(
     Returns:
         pd.DataFrame: DataFrame with engineered features
     """
-    # TODO add transformation for margin and tumor location
     
     # Construct new columns from existing data
-    my_print_header("Feature Engineering...")
+    print_and_log_w_header("Feature Engineering...")
+    
+    # First fix a few issues where the date is parsed incorrectly by pandas
+    # Convert dob column to datetime
+    df["PRE_dob"] = pd.to_datetime(df["PRE_dob"])
+    # Fix issues where two-digit years e.g., 58 is parsed as 2058
+    df["PRE_dob"] = df["PRE_dob"].apply(lambda x: x.year - 100 if x.year > 2010 else x.year)
+    df["PRE_dximg_date"] = pd.to_datetime(df["PRE_dximg_date"])
+    df["PRE_dximg_date"] = df["PRE_dximg_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
+    df["PRE_surgery_date"] = pd.to_datetime(df["PRE_surgery_date"])
+    df["PRE_surgery_date"] = df["PRE_surgery_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
+    df["PRE_pre_op_biop_date"] = pd.to_datetime(df["PRE_pre_op_biop_date"])
+    df["PRE_pre_op_biop_date"] = df["PRE_pre_op_biop_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
+    
+    
     abnormal_ln_cols = [
         'PRE_abnormal_lymph',
         'PRE_prominent_axillary_lymph',
@@ -48,6 +61,8 @@ def engineer_features(
     age_at_dxs = []
     age_at_surg = []
     bmis = []
+    tumor_location_trans = []
+    margins_trans = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
     tumor_max_size_composites = []
@@ -55,30 +70,60 @@ def engineer_features(
     
     # Remove "ANN" prefix from record_id
     df['PRE_record_id'] = df['PRE_record_id'].apply(
-        lambda x: re.sub(r'ANN|L|R', '', x))
+        lambda x: re.sub(r'ANN|L|R', '', str(x)))
 
-    # Converet all string cells to numeric
-    df = df.apply(pd.to_numeric, errors='coerce')
     
     for _, row in tqdm(df.iterrows()):
-        # TODO pre_op_biopsy_date_year or surgery_date_year - dob
-        # Construct "age_at_dx" as the age at the time of diagnosis
-        dob = pd.to_datetime(row["PRE_dob"])
-        dx_date = pd.to_datetime(row["PRE_dximg_date"])
+        # transformation for tumor location
+        la = str(row["PRE_tumor_laterality"]).strip().lower()
+        lo = str(row["PRE_tumor_location"]).strip().lower()
+        if str(la) == "nan" or str(lo) == "nan":
+            location_trans = np.nan
+        else:
+            clock_orientation = re.search(r"^\d\d?", lo)
+            location_trans = ""
+            if clock_orientation:
+                loc = clock_orientation.group()
+                if len(loc):
+                    if la in ["1", "1.0"]: # RIGHT
+                        location_trans = "-" + loc
+                    elif la in ["2", "2.0"]:
+                        location_trans = "+" + loc
+            try:
+                location_trans = int(location_trans)
+            except:
+                location_trans = np.nan
+        # print(f"Location trans of {la} {lo}: {location_trans}")
+        tumor_location_trans.append(location_trans)
+        # transformation for margins
+        margin = row["PRE_closest_margin"]
+        if str(margin) == "nan":
+            margin_tran = np.nan
+        else:
+            margin_tran = re.split(",|and", str(margin))
+        margins_trans.append(margin_tran)
+        
+        # Use pre_op_biopsy_date_year or surgery_date_year - dob
+        # to construct "age_at_dx" as the age at the time of diagnosis
+        # dob = pd.to_datetime(row["PRE_dob"])
+        # dx_date = pd.to_datetime(row["PRE_dximg_date"])
+        dob = row["PRE_dob"]
+        dx_date = row["PRE_dximg_date"]
         if str(dx_date) == "nan":
             age_at_dxs.append(np.nan)
         else:
-            years_elapsed = abs(round((dx_date - dob).days / 365.25, 2))
+            years_elapsed = round(dx_date - dob)
             age_at_dxs.append(years_elapsed)
-            print(f"{row['PRE_record_id']} age_at_dx: "
-                  f"{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
+            # print(f"{row['PRE_record_id']} age_at_dx: "
+            #       f"{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
         
         # Construct "age_at_surg"
-        surg_date = pd.to_datetime(row["PRE_surgery_date"])
+        # surg_date = pd.to_datetime(row["PRE_surgery_date"])
+        surg_date = row["PRE_surgery_date"]
         if str(surg_date) == "nan":
             age_at_surg.append(np.nan)
         else:
-            years_elapsed = abs(round((surg_date - dob).days / 365.25, 2))
+            years_elapsed = round(surg_date - dob)
             age_at_surg.append(years_elapsed)
             print(f"{row['PRE_record_id']} age_at_surg: "
                   f"{years_elapsed}, dob: {dob}, surg_date: {surg_date}")
@@ -101,7 +146,7 @@ def engineer_features(
         susp_LN_size_composites.append(max_size)
 
         # Construct "susp_LN_prsnt_composite" to be the presence of abnormal LN
-        susp_LN_prsnt_composite = 3
+        susp_LN_prsnt_composite = 0
         for col in abnormal_ln_cols:
             value = row[col]
             if str(value) == "nan":
@@ -114,6 +159,12 @@ def engineer_features(
         tumor_max_size_composite = np.nan
         for col in pre_tumor_max_size_composite_cols:
             value = row[col]
+            if type(value) == str:
+                value = re.sub("<|>", "", value)
+                try:
+                    value = float(value)
+                except ValueError:
+                    value = np.nan
             if str(value) == "nan":
                 continue
             else:
@@ -130,6 +181,16 @@ def engineer_features(
         "PRE_age_at_dx",
         age_at_dxs
         )
+    df.insert(
+        list(df.columns).index("PRE_tumor_location")+1,
+        "PRE_tumor_location_trans",
+        tumor_location_trans
+    )
+    df.insert(
+        list(df.columns).index("PRE_closest_margin")+1,
+        "PRE_num_closest_margins_trans",
+        margins_trans
+    )
     df.insert(
         list(df.columns).index("PRE_age_at_dx")+1,
         "PRE_age_at_surg",
@@ -156,7 +217,7 @@ def engineer_features(
         tumor_max_size_composites
         )
 
-    # Construct nomogram feature
+    # TODO Construct nomogram feature
     
 
     # Converet all string cells to numeric
@@ -167,8 +228,8 @@ def engineer_features(
         if is_integral_type(col):
             df[col] = df[col].astype("int")
 
-    my_print("Converted all strings to numeric, and used NaN if impossible.")
-    my_print(
+    print_and_log("Converted all strings to numeric, and used NaN if impossible.")
+    print_and_log(
         "✅ Feature Engineering - Added new feature 'PRE_age_at_dx', 'PRE_bmi'"
         "'PRE_susp_LN_size_composite',  'PRE_susp_LN_prsnt_composite', "
         "'PRE_tumor_max_size_composite'"
