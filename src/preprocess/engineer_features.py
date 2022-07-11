@@ -20,6 +20,37 @@ def engineer_features(
     Returns:
         pd.DataFrame: DataFrame with engineered features
     """
+
+    def transform_location(la: str, lo: str) -> int:
+        """Transform tumor location to a single number
+
+        Args:
+            la (str): laterality, 1 = left, 2 = right
+            lo (str): location
+        """
+        if str(la) == "nan" or str(lo) == "nan":
+            location_trans = np.nan
+        else:
+            clock_orientation = re.search(r"^\d+", lo)
+            location_trans = ""
+            if clock_orientation:
+                loc = clock_orientation.group()
+                if len(loc) >= 3:
+                    loc_num = int(loc[:2])
+                    if loc_num > 12:
+                        loc = loc[:1]
+                    else:
+                        loc = loc[:2]
+                if len(loc):
+                    if la in ["1", "1.0"]: # RIGHT
+                        location_trans = "-" + loc
+                    elif la in ["2", "2.0"]:
+                        location_trans = "+" + loc
+            try:
+                location_trans = int(location_trans)
+            except:
+                location_trans = np.nan
+        return location_trans
     
     # Construct new columns from existing data
     print_and_log_w_header("Feature Engineering...")
@@ -35,7 +66,9 @@ def engineer_features(
     df["PRE_surgery_date"] = df["PRE_surgery_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
     df["PRE_pre_op_biop_date"] = pd.to_datetime(df["PRE_pre_op_biop_date"])
     df["PRE_pre_op_biop_date"] = df["PRE_pre_op_biop_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
-    
+    # For bi_rads_score, keep only the numeric prefix part if it exists
+    # TODO check whether to convert 4A 4B to numeric decimals
+    df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.search(r"\d+", str(x)).group() if re.search(r"\d+", str(x)) else np.nan)
     
     abnormal_ln_cols = [
         'PRE_abnormal_lymph',
@@ -61,7 +94,8 @@ def engineer_features(
     age_at_dxs = []
     age_at_surg = []
     bmis = []
-    tumor_location_trans = []
+    pre_tumor_location_trans = []
+    pos_tumor_location_trans = []
     margins_trans = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
@@ -70,37 +104,35 @@ def engineer_features(
     
     # Remove "ANN" prefix from record_id
     df['PRE_record_id'] = df['PRE_record_id'].apply(
-        lambda x: re.sub(r'ANN|L|R', '', str(x)))
+        lambda x: re.sub(r'ANN', '', str(x)))
+    # If record_id has left laterality, replace it with .2
+    df['PRE_record_id'] = df['PRE_record_id'].apply(
+        lambda x: re.sub(r'L', '.2', str(x)))
+    # If record_id has right laterality, replace it with .1
+    df['PRE_record_id'] = df['PRE_record_id'].apply(
+        lambda x: re.sub(r'R', '.1', str(x)))
 
     
     for _, row in tqdm(df.iterrows()):
         # transformation for tumor location
         la = str(row["PRE_tumor_laterality"]).strip().lower()
-        lo = str(row["PRE_tumor_location"]).strip().lower()
-        if str(la) == "nan" or str(lo) == "nan":
-            location_trans = np.nan
-        else:
-            clock_orientation = re.search(r"^\d\d?", lo)
-            location_trans = ""
-            if clock_orientation:
-                loc = clock_orientation.group()
-                if len(loc):
-                    if la in ["1", "1.0"]: # RIGHT
-                        location_trans = "-" + loc
-                    elif la in ["2", "2.0"]:
-                        location_trans = "+" + loc
-            try:
-                location_trans = int(location_trans)
-            except:
-                location_trans = np.nan
-        # print(f"Location trans of {la} {lo}: {location_trans}")
-        tumor_location_trans.append(location_trans)
+        pre_lo = str(row["PRE_tumor_location"]).strip().lower()
+        pos_lo = str(row["POS_tumor_loc"]).strip().lower()
+        pre_location_trans = transform_location(la, pre_lo)
+        pos_location_trans = transform_location(la, pos_lo)
+        if str(pre_location_trans) != "nan":
+            print(f"Location trans of {la} {pre_lo}: {pre_location_trans}, patient: {row['PRE_record_id']}")
+        if str(pre_location_trans) != "nan":
+            print(f"Location trans of {la} {pos_lo}: {pos_location_trans}, patient: {row['PRE_record_id']}")
+        pre_tumor_location_trans.append(pre_location_trans)
+        pos_tumor_location_trans.append(pos_location_trans)
         # transformation for margins
         margin = row["PRE_closest_margin"]
         if str(margin) == "nan":
             margin_tran = np.nan
         else:
-            margin_tran = re.split(",|and", str(margin))
+            margin_tran = len(re.split(",|and", str(margin)))
+            print(f"{row['PRE_record_id']} margins_trans: {margin_tran}")
         margins_trans.append(margin_tran)
         
         # Use pre_op_biopsy_date_year or surgery_date_year - dob
@@ -184,7 +216,7 @@ def engineer_features(
     df.insert(
         list(df.columns).index("PRE_tumor_location")+1,
         "PRE_tumor_location_trans",
-        tumor_location_trans
+        pre_tumor_location_trans
     )
     df.insert(
         list(df.columns).index("PRE_closest_margin")+1,
@@ -216,8 +248,13 @@ def engineer_features(
         "PRE_tumor_max_size_composite",
         tumor_max_size_composites
         )
+    df.insert(
+        list(df.columns).index("POS_tumor_loc")+1,
+        "POS_tumor_location_trans",
+        pre_tumor_location_trans
+    )
 
-    # TODO Construct nomogram feature
+    # TODO Construct nomogram feature?
     
 
     # Converet all string cells to numeric

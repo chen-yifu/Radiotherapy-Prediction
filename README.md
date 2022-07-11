@@ -40,9 +40,9 @@ The entire data flow begins with the preprocessing of the raw data, which includ
 ### Usage Commands
 
 - To run the pre-processing pipeline
-  - in production mode with training new models: `python3 main.py`
+  - in production mode with training new models: ` python main.py --df_path <PATH_TO_RAW_CSV>`
   - in production mode with previously-trained best models: `python3 main.py -f `
-  - in debug mode: `python3 main.py --debug`
+  - in debug mode: `python3 main.py --debug --df_path <PATH_TO_RAW_CSV>`
   - run tests: `python -m pytest tests/`
   - To display logs (with color-highlighting):
 `cat data/preprocessed/<OUTPUT_TIMESTAMP>/log.txt`

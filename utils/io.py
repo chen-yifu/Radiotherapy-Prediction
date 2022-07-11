@@ -24,13 +24,13 @@ def load_result_holders(experiment_dir: str) \
     pickle_name = "AllColumnsGridSearchResultHolders.pkl"
     path = os.path.join(experiment_dir, pickle_name)
     if not os.path.exists(path):
-        my_print("No result holders found, initialized to empty dict.")
+        print_and_log("No result holders found, initialized to empty dict.")
         return {}
     else:
         with open(path, "rb") as f:
             result_holders = pickle.load(f)
-        my_print("Loaded result holders from:", path)
-        my_print(
+        print_and_log("Loaded result holders from:", path)
+        print_and_log(
             f"Found result_holders for columns {result_holders.keys()}",
             bcolors.NORMAL
         )
@@ -59,7 +59,7 @@ def initialize_experiment_folder():
         experiment_dir = os.path.join(out_dir, cur_timestamp)
     os.mkdir(experiment_dir)
     config.experiment_dir = experiment_dir
-    my_print(
+    print_and_log(
         "Created experiment folder:",
         experiment_dir,
         color=bcolors.OKGREEN
@@ -81,8 +81,8 @@ def save_experiment_df(
     if skip_if_exists and os.path.exists(file_path):
         return
     df.to_csv(file_path, index=False)
-    my_print(
-        f"Saved DataFrame for {description} to: {file_path}.",
+    print_and_log(
+        f"Saved DataFrame for {description} to: {file_path}",
         color=bcolors.OKGREEN
     )
     return file_path
@@ -93,8 +93,8 @@ def save_experiment_pickle(object, file_name: str, description: str):
     file_path = os.path.join(experiment_dir, file_name)
     with open(file_path, 'wb') as f:
         pickle.dump(object, f)
-    my_print(
-        f"Saved {description} Object to: {file_path}.",
+    print_and_log(
+        f"Saved {description} Object to: {file_path}",
         color=bcolors.OKGREEN
     )
     return file_path
@@ -125,7 +125,7 @@ class bcolors:
     NORMAL = '\033[0m'
 
 
-def my_print(*args, add_sep=False, color=bcolors.WARNING, plain=False):
+def print_and_log(*args, add_sep=False, color=bcolors.WARNING, plain=False):
     # print with orange
     text = " ".join(args)
     if add_sep:
@@ -138,6 +138,6 @@ def my_print(*args, add_sep=False, color=bcolors.WARNING, plain=False):
     add_to_log(content)
 
 
-def my_print_header(*args):
-    my_print("-"*100)
-    my_print(*args)
+def print_and_log_w_header(*args):
+    print_and_log("-"*100)
+    print_and_log(*args)

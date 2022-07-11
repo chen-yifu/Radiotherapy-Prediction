@@ -14,7 +14,7 @@ import re
 import pickle
 from collections import defaultdict
 
-from utils.io import my_print
+from utils.io import print_and_log
 from utils.io import save_experiment_df
 from utils.io import bcolors
 from utils.find_column_type import find_column_type, is_integral_type
@@ -100,11 +100,11 @@ class ColumnGridSearchResults:
             hyperparameter_setting (tuple): hyperparameter setting
         """
         compares = self.metrics[model_name][hyperparameter_setting]["compares"]
-        my_print(
+        print_and_log(
             "Showing (ground_truth, imputed, patient_id) imputed by"
             f" {model_name} with hyperparameters {hyperparameter_setting}:",
             color=bcolors.BOLD)
-        my_print(str(compares), color=bcolors.NORMAL)
+        print_and_log(str(compares), color=bcolors.NORMAL)
 
     def calc_metrics(
         self,
@@ -122,7 +122,7 @@ class ColumnGridSearchResults:
         holder = self.metrics[model_name][hyperparameter_setting]
         compares = holder["compares"]
         if type(compares) == float:
-            my_print("No 'compares' was found", color=bcolors.NORMAL)
+            print_and_log("No 'compares' was found", color=bcolors.NORMAL)
             return -1
         # Calculate RMSE of the imputation
         # TODO implement metric calculation for accuracy, F1, rmse
@@ -221,25 +221,25 @@ class ColumnGridSearchResults:
 
         column_name = self.column_name
         model, name, hyper = self.get_best_model(metric)
-        my_print(f"The best model for {column_name} is {name} using {hyper}.")
+        print_and_log(f"The best model for {column_name} is {name} using {hyper}.")
         if name == "KNN":
             scaler = preprocessing.StandardScaler().fit(base_cols_df)
             base_cols_df = pd.DataFrame(
                 scaler.transform(base_cols_df),
                 columns=base_cols_df.columns
             )
-            my_print("Standardized base columns for KNN imputation.",
+            print_and_log("Standardized base columns for KNN imputation.",
                      color=bcolors.NORMAL)
         temp_df = base_cols_df.copy(deep=True)
         if column_name not in temp_df.columns:
             temp_df[column_name] = df[column_name]
         imputed_df = impute(model, temp_df, df_metadata, column_name)
         # Show the values that are imputed and was missing before
-        my_print(f"Before and After of {column_name}:", color=bcolors.BOLD)
+        print_and_log(f"Before and After of {column_name}:", color=bcolors.BOLD)
         missing_idxs = df[column_name].isnull()
         missing_idxs = missing_idxs.index[missing_idxs]
         # Print DataFrame ID, value before imputation, and imputed value
-        my_print(
+        print_and_log(
             str(df.loc[
                 missing_idxs,
                 ["PRE_record_id", column_name]
@@ -322,12 +322,12 @@ def find_best_KNN(
         KNNImputer: the optimal KNN imputer
     """
 
-    my_print(f"KNN: search best n_neighbors over {n_neighbors_range}.")
+    print_and_log(f"KNN: search best n_neighbors over {n_neighbors_range}.")
 
     # TODO: for the categorical ones create separate columns for each category?
     #       (use one-hot/standard function)
 
-    my_print(f"Imputing {column_name}", plain=True)
+    print_and_log(f"Imputing {column_name}", plain=True)
 
     # Standardize the columns of DataFrame independently
     if standardize:
@@ -389,7 +389,7 @@ def find_best_KNN(
                     patient_id
                     )
             except Exception as e:
-                my_print(f"Skipped row {i} due to an error.")
+                print_and_log(f"Skipped row {i} due to an error.")
                 raise e
         rmse = result_holder.calc_metrics("KNN", hyperparameter, "rmse")
         if rmse < best_rmse:
@@ -397,12 +397,12 @@ def find_best_KNN(
             best_rmse = rmse
 
         result_holder.save_model("KNN", KNN, hyperparameter)
-        my_print(
+        print_and_log(
                 f"n_neighbors = {n_neighbors}. RMSE = {rmse} "
                 f"| Best n_neighbors = {best_n}. Best RMSE = {best_rmse}",
                 plain=True
                 )
-    my_print(f"KNN: Best n_neighbors = {best_n}")
+    print_and_log(f"KNN: Best n_neighbors = {best_n}")
     return KNNImputer(n_neighbors=best_n)
 
 
@@ -428,7 +428,7 @@ def find_best_RF(
     Returns:
         IterativeImputer: the optimal RF imputer (wrapped by IterativeImputer)
     """
-    my_print(f"RF: search best max_depth over {max_depth_range}"
+    print_and_log(f"RF: search best max_depth over {max_depth_range}"
              f", and n_estimators {n_estimators_range}.")
 
     # TODO: for col in tqdm(df.columns):
@@ -490,7 +490,7 @@ def find_best_RF(
                             pid
                             )
                 except ValueError as e:
-                    my_print(
+                    print_and_log(
                         f"Skipped row {i} due to an error: {e}",
                         color=bcolors.NORMAL
                     )
@@ -506,7 +506,7 @@ def find_best_RF(
                 best_max_depth = max_depth
                 best_rmse = rmse
             result_holder.save_model("RF", RF, hyperparameter)
-            my_print(
+            print_and_log(
                 f"n_estimators = {n_estimators}, max_depth = {max_depth}."
                 f" RMSE = {rmse} |"
                 f" Best n_estimators = {best_n}, max_depth = {best_max_depth}."
@@ -514,7 +514,7 @@ def find_best_RF(
                 plain=True
             )
 
-    my_print(f"Best RF: n_estimators = {best_n}, max_depth = {best_max_depth}")
+    print_and_log(f"Best RF: n_estimators = {best_n}, max_depth = {best_max_depth}")
 
     best_imputer = IterativeImputer(
             estimator=RandomForestRegressor(
@@ -545,25 +545,25 @@ def impute_column(
         Tuple[pd.DataFrame, ColumnGridSearchResults]: Imputed DataFrame and
             results of grid search
     """
-    my_print(f"Optimizing for the best imputer for {column_name}...")
+    print_and_log(f"Optimizing for the best imputer for {column_name}...")
 
     if not result_holder:
         result_holder = ColumnGridSearchResults(column_name)
-        my_print(f"Using the following columns to impute {column_name}:")
-        my_print(", ".join(base_cols_df.columns), plain=True)
+        print_and_log(f"Using the following columns to impute {column_name}:")
+        print_and_log(", ".join(base_cols_df.columns), plain=True)
         if config.debug_mode:
             KNN_n_neighbors_range = [3, 10]
             RF_n_estimators_range = [5, 10]
             RF_max_depth_range = [1, 2]
         else:
             # [3, 5, 9, 15, 23, 33, 45, 59]  # range(3, 19, 2)
-            KNN_n_neighbors_range = [3, 5, 9, 15, 23, 33]
+            KNN_n_neighbors_range = [3, 5, 9, 17, 33]
 
             # [50, 150]  # range(51, 251, 50)  # range(1, 15, 3)
-            RF_n_estimators_range = [30, 50, 90]
+            RF_n_estimators_range = [30, 60, 120]
 
             #  range(3, 8, 2)  # range(5, 16, 3)  # range(1, 15, 3)
-            RF_max_depth_range = [4, 7, 10]
+            RF_max_depth_range = [4, 6, 8]
 
         find_best_KNN(
             df,
@@ -586,7 +586,7 @@ def impute_column(
     # Show the imputation of the best model of each type, e.g., KNN, RF
     for model_name in result_holder.model_names:
         _, _, hyper = result_holder.get_best_model(target_metric, model_name)
-        my_print(f"{model_name} with best {target_metric} used {hyper}.")
+        print_and_log(f"{model_name} with best {target_metric} used {hyper}.")
         result_holder.show_compare(model_name, hyper)
 
     print(f"Imputing {column_name} using the best model...")

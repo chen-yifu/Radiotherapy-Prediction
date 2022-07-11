@@ -1,10 +1,10 @@
-from utils.io import my_print_header, my_print
+from utils.io import print_and_log_w_header, print_and_log
 from tqdm import tqdm
 import numpy as np
 
 
 def expert_impute(df, metadata_df):
-    my_print_header("Expert Imputation...")
+    print_and_log_w_header("Expert Imputation...")
     imputed_locs = {}
     global row, val, orig_val
     for col in tqdm(metadata_df["Field"]):
@@ -24,7 +24,7 @@ def expert_impute(df, metadata_df):
                 else:
                     df.loc[i, col] = val
                 imputed_locs[(i, col)] = (orig_val, val)
-    my_print("✅ Expert Imputation - Used expert manual rules to"
+    print_and_log("✅ Expert Imputation - Used expert manual rules to"
              " impute missing values in some columns."
              f"{len(imputed_locs)} cells were filled.",
              plain=True)

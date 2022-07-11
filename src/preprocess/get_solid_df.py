@@ -1,4 +1,4 @@
-from utils.io import my_print
+from utils.io import print_and_log
 import pandas as pd
 
 
@@ -28,9 +28,9 @@ def get_solid_df(
             if len(col_group) and col_group.item() != "PRE":
                 columns.remove(col)
 
-    my_print(f"{len(columns)} out of {len(df.columns)} all columns are PRE"
+    print_and_log(f"{len(columns)} out of {len(df.columns)} all columns are PRE"
              f" and have ≤ {sparsity_threshold} missing cells.")
-    my_print(f"They are {columns}")
+    print_and_log(f"They are {columns}")
 
     result_df = pd.DataFrame(df[columns])
     return result_df
