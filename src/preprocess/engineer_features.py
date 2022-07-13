@@ -67,8 +67,11 @@ def engineer_features(
     df["PRE_pre_op_biop_date"] = pd.to_datetime(df["PRE_pre_op_biop_date"])
     df["PRE_pre_op_biop_date"] = df["PRE_pre_op_biop_date"].apply(lambda x: x.year + 100 if x.year < 1990 else x.year)
     # For bi_rads_score, keep only the numeric prefix part if it exists
-    # TODO check whether to convert 4A 4B to numeric decimals
-    df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.search(r"\d+", str(x)).group() if re.search(r"\d+", str(x)) else np.nan)
+    # Convert 4A, 4B, 4C in bi_rads_score to 4, 4.3, 4.6 respectively 
+    df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.sub(r"^4A", "4", str(x)))
+    df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.sub(r"^4B", "4.3", str(x)))
+    df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.sub(r"^4C", "4.7", str(x)))
+    # df["PRE_bi_rads_score"] = df["PRE_bi_rads_score"].apply(lambda x: re.search(r"\d+", str(x)).group() if re.search(r"\d+", str(x)) else np.nan)
     
     abnormal_ln_cols = [
         'PRE_abnormal_lymph',

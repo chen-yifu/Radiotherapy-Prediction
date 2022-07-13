@@ -41,6 +41,7 @@ The entire data flow begins with the preprocessing of the raw data, which includ
 
 - To run the pre-processing pipeline
   - in production mode with training new models: ` python main.py --df_path <PATH_TO_RAW_CSV>`
+  - - in production mode with training new models, impute-only: ` python main.py --df_path <PATH_TO_CLEANSED_CSV> --impute_only`
   - in production mode with previously-trained best models: `python3 main.py -f `
   - in debug mode: `python3 main.py --debug --df_path <PATH_TO_RAW_CSV>`
   - run tests: `python -m pytest tests/`
@@ -53,7 +54,7 @@ The entire data flow begins with the preprocessing of the raw data, which includ
     - use `-vizall` flag to plot all columns: `python3 src/visualize/visualizer.py -vizall`
 
 
-- To generate subsets of the original dataset using specific subsets of columns: `python scripts/generate_datasets.py`
+- To generate subsets of the original dataset using specific subsets of columns: `python scripts/generate_datasets.py --df_dir_path <PATH_TO_IMPUTED_DF_FOLDER>`
 
 - To compare the two versions of the same dataset and obtain the differences: `python scripts/compare_datasets.py`
 
@@ -61,6 +62,8 @@ The entire data flow begins with the preprocessing of the raw data, which includ
 
 - Other miscellaneous notebooks:
   - Using automated form-filling to perform feature engineering using monogram website: `notebooks/Apply Nomogram.ipynb`
+  - Perform exploratory data analysis and calculate column-wise summary statistics: `notebooks/Value Count.ipynb`
+  - Evaluate the performance and metrics of imputed missing values: `notebooks/Evaluate Imputation.ipynb`
 
 
 ## An End-to-End ML Pipeline 

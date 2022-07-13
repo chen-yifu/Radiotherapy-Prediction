@@ -1,11 +1,26 @@
 import pandas as pd
 import os
-
-
+from datetime import datetime
+from argparse import ArgumentParser
 global out_dir, input_dir
-output_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/experiments/Jun16 Datasets for Experiments Table (enhanced expert cols)"
-input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-06-15-214322/DataFrames/"
 
+
+
+# Parse Arguments
+parser = ArgumentParser()
+parser.add_argument(
+    "--df_dir_path",
+    type=str,
+    required=False,
+    help="path to the folder of pre-processed DataFrames"
+)
+args = parser.parse_args()
+    
+
+current_datetime_str = datetime.now().strftime("%Y-%m-%d_%H%M")
+# input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-07-11-151005/DataFrames"
+input_dir = args.df_dir_path
+output_dir = os.path.join(input_dir, "subset_dataframes")
 # Create output directory if not exists
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -58,7 +73,7 @@ def custom_to_csv(df, out_dir, out_name, index=False):
 # Generate different subsets of the dataset
 if __name__ == "__main__":
     # Read the datasets needed
-    df_cleansed = pd.read_csv(os.path.join(input_dir, "Dataset-cleansed.csv"))
+    # df_cleansed = pd.read_csv(os.path.join(input_dir, "Dataset-cleansed.csv"))
     df_solid = pd.read_csv(os.path.join(input_dir, "Dataset-solid.csv"))
     df_very_solid = pd.read_csv(
         os.path.join(input_dir, "Dataset-very_solid.csv")
@@ -85,7 +100,7 @@ if __name__ == "__main__":
         "PRE_int_mammary_lymphade_pet",
         'POS_did_the_patient_receive_pm'
     ]
-    alan_picked_df = df_cleansed[alan_picked_cols]
+    alan_picked_df = df_preprocessed[alan_picked_cols]
     custom_to_csv(
         alan_picked_df,
         output_dir,
@@ -107,17 +122,17 @@ if __name__ == "__main__":
         'PRE_pr_status',
         'PRE_er_status',
         'PRE_her_status',
-        'PRE_systhe___1',
-        'PRE_systhe___2',
-        'PRE_systhe___3',
-        'PRE_systhe___4',
-        'PRE_systhe___5',
+        'PRE_systhe___chemo',
+        'PRE_systhe___hormonal',
+        'PRE_systhe___chemo_and_hormonal',
+        'PRE_systhe___no_systhe',
+        'PRE_systhe___radiation',
         'PRE_susp_LN_prsnt_composite',
         'PRE_susp_LN_size_composite',
         "PRE_susp_LN_prsnt_composite",
         'PRE_margin_status',
         'PRE_closest_margin',
-        'PRE_closest_margin_trans',
+        'PRE_num_closest_margins_trans',
         'PRE_axillary_lymph_node_palpab',
         'PRE_prominent_axillary_lymph',
         "PRE_axillary_lymphadenopathy",
@@ -177,6 +192,19 @@ if __name__ == "__main__":
         output_dir,
         "PRE-expert-picked.csv"
     )
+    expert_picked_imputed_df_preprocessed = df_preprocessed[expert_picked_cols]
+    custom_to_csv(
+        expert_picked_imputed_df,
+        output_dir,
+        "PRE-expert-imputed-preprocessed.csv"
+    )
+    
+    expert_picked_enhanced_imputed_df_preprocessed = df_preprocessed[expert_picked_cols_enhanced]
+    custom_to_csv(
+        expert_picked_enhanced_imputed_df,
+        output_dir,
+        "PRE-expert-imputed-enhanced-preprocessed.csv"
+    )
 
     # Generate the DF containing all the columns picked by experts,
     # And also the columns with sparsities at most x%
@@ -201,9 +229,9 @@ if __name__ == "__main__":
                 if col.startswith("PRE_")
                 or col == "POS_did_the_patient_receive_pm"
             ]
-            file_name = f"PRE-{sparsity_threshold}spars-expert-imputed.csv"
+            file_name = f"PRE-{sparsity_threshold}spars-expert-ML-imputed.csv"
         else:
-            file_name = f"POS-{sparsity_threshold}spars-expert-imputed.csv"
+            file_name = f"POS-{sparsity_threshold}spars-expert-ML-imputed.csv"
         df_sparsity = df_preprocessed[cols_with_sparsity]
         # Merge DFs, remove duplicate columns by keeping the first one
         df_sparsity = pd.merge(

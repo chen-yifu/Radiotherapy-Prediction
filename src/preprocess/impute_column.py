@@ -223,6 +223,7 @@ class ColumnGridSearchResults:
         model, name, hyper = self.get_best_model(metric)
         print_and_log(f"The best model for {column_name} is {name} using {hyper}.")
         if name == "KNN":
+            # Standardize all columns
             scaler = preprocessing.StandardScaler().fit(base_cols_df)
             base_cols_df = pd.DataFrame(
                 scaler.transform(base_cols_df),
@@ -234,23 +235,39 @@ class ColumnGridSearchResults:
         if column_name not in temp_df.columns:
             temp_df[column_name] = df[column_name]
         imputed_df = impute(model, temp_df, df_metadata, column_name)
+        # # Write back the PRE_record_id from the original dataframe
+        # imputed_df["PRE_record_id"] = df["PRE_record_id"]
         # Show the values that are imputed and was missing before
         print_and_log(f"Before and After of {column_name}:", color=bcolors.BOLD)
         missing_idxs = df[column_name].isnull()
         missing_idxs = missing_idxs.index[missing_idxs]
         # Print DataFrame ID, value before imputation, and imputed value
-        print_and_log(
-            str(df.loc[
-                missing_idxs,
-                ["PRE_record_id", column_name]
-                ].head()),
-            "\n",
-            str(imputed_df.loc[
-                missing_idxs,
-                ["PRE_record_id", column_name]
-            ]),
-            color=bcolors.NORMAL
-        )
+        if "PRE_tumor_max_size_composite" not in df.columns:            
+            print_and_log(
+                str(df.loc[
+                    missing_idxs,
+                    ["PRE_record_id", column_name]
+                    ].head()),
+                "\n",
+                str(imputed_df.loc[
+                    missing_idxs,
+                    ["PRE_record_id", column_name]
+                ]),
+                color=bcolors.NORMAL
+            )
+        else:
+            print_and_log(
+                str(df.loc[
+                    missing_idxs,
+                    ["PRE_record_id", "PRE_tumor_max_size_composite", column_name]
+                    ].head()),
+                "\n",
+                str(imputed_df.loc[
+                    missing_idxs,
+                    ["PRE_record_id", "PRE_tumor_max_size_composite", column_name]
+                ]),
+                color=bcolors.NORMAL
+            )
 
         return imputed_df
 
@@ -583,6 +600,7 @@ def impute_column(
             max_depth_range=RF_max_depth_range,
             n_estimators_range=RF_n_estimators_range
             )
+        
     # Show the imputation of the best model of each type, e.g., KNN, RF
     for model_name in result_holder.model_names:
         _, _, hyper = result_holder.get_best_model(target_metric, model_name)
