@@ -42,9 +42,9 @@ def engineer_features(
                     else:
                         loc = loc[:2]
                 if len(loc):
-                    if la in ["1", "1.0"]: # RIGHT
+                    if str(la) in ["1", "1.0"]: # RIGHT
                         location_trans = "-" + loc
-                    elif la in ["2", "2.0"]:
+                    elif str(la) in ["2", "2.0"]:  # LEFT
                         location_trans = "+" + loc
             try:
                 location_trans = int(location_trans)

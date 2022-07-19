@@ -40,8 +40,9 @@ The entire data flow begins with the preprocessing of the raw data, which includ
 ### Usage Commands
 
 - To run the pre-processing pipeline
-  - in production mode with training new models: ` python main.py --df_path <PATH_TO_RAW_CSV>`
-  - - in production mode with training new models, impute-only: ` python main.py --df_path <PATH_TO_CLEANSED_CSV> --impute_only`
+  - in production mode with training new imputation models: ` python main.py --df_path <PATH_TO_RAW_CSV>`
+  - in production mode with training new imputation models, ML impute-only (no other pre-processing): ` python main.py --df_path <PATH_TO_CLEANSED_CSV> --ml_impute_only`
+  <!-- - in production mode with training new imputation models, Expert impute-only (with other pre-processing): ` python main.py --df_path <PATH_TO_CLEANSED_CSV> --expert_impute_only` -->
   - in production mode with previously-trained best models: `python3 main.py -f `
   - in debug mode: `python3 main.py --debug --df_path <PATH_TO_RAW_CSV>`
   - run tests: `python -m pytest tests/`
