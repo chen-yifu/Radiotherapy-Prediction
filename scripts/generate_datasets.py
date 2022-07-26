@@ -5,7 +5,6 @@ from argparse import ArgumentParser
 global out_dir, input_dir
 
 
-
 # Parse Arguments
 parser = ArgumentParser()
 parser.add_argument(
@@ -43,8 +42,6 @@ class bcolors:
 
 def custom_to_csv(df, out_dir, out_name, index=False):
     global df_idx
-    if 'POS_did_the_patient_receive_pm' not in df.columns:
-        raise ValueError("POS_did_the_patient_receive_pm is not in the dataframe")
     # Reformat the out_name with number of columns
     out_name = out_name.replace(".csv", str(len(df.columns)) + "cols.csv")
     # Add Hex prefix
@@ -97,8 +94,7 @@ if __name__ == "__main__":
         "PRE_axillary_lymphadenopathy",
         "PRE_internal_mammary_lymphaden",
         "PRE_axillary_lymphadenopathy_p",
-        "PRE_int_mammary_lymphade_pet",
-        'POS_did_the_patient_receive_pm'
+        "PRE_int_mammary_lymphade_pet"
     ]
     alan_picked_df = df_preprocessed[alan_picked_cols]
     custom_to_csv(
@@ -142,8 +138,7 @@ if __name__ == "__main__":
         "PRE_int_mammary_lymphade_pet",
         'PRE_axillary_lymph_node_max_si',
         'PRE_lymph_node_max_size_mm0',
-        'PRE_img_size',
-        'POS_did_the_patient_receive_pm'
+        'PRE_img_size'
     ]
     expert_picked_cols = [
         'PRE_record_id',
@@ -169,8 +164,7 @@ if __name__ == "__main__":
         "PRE_int_mammary_lymphade_pet",
         'PRE_axillary_lymph_node_max_si',
         'PRE_lymph_node_max_size_mm0',
-        'PRE_img_size',
-        'POS_did_the_patient_receive_pm'
+        'PRE_img_size'
     ]
     # expert_picked_df = df_cleansed[expert_picked_cols]
     # custom_to_csv(
@@ -227,7 +221,6 @@ if __name__ == "__main__":
             cols_with_sparsity = [
                 col for col in cols_with_sparsity
                 if col.startswith("PRE_")
-                or col == "POS_did_the_patient_receive_pm"
             ]
             file_name = f"PRE-{sparsity_threshold}spars-expert-ML-imputed.csv"
         else:

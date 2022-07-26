@@ -1,0 +1,232 @@
+07/26/2022 14:22:20 - INFO - 0_PRE-alan-heuristic7cols 
+
+07/26/2022 14:22:20 - INFO - 1_PRE-expert-imputed25cols 
+
+07/26/2022 14:22:20 - INFO - 2_PRE-expert-picked36cols 
+
+07/26/2022 14:22:20 - INFO - 3_PRE-expert-imputed-preprocessed25cols 
+
+07/26/2022 14:22:20 - INFO - 4_PRE-expert-imputed-enhanced-preprocessed36cols 
+
+07/26/2022 14:22:20 - INFO - 5_PRE-0.05spars-expert-ML-imputed76cols 
+
+07/26/2022 14:22:20 - INFO - 6_PRE-0.2spars-expert-ML-imputed77cols 
+
+07/26/2022 14:22:20 - INFO - 7_PRE-0.5spars-expert-ML-imputed79cols 
+
+07/26/2022 14:22:20 - INFO - 8_PRE-0.8spars-expert-ML-imputed83cols 
+
+07/26/2022 14:22:20 - INFO - 9_PRE-1.0spars-expert-ML-imputed89cols 
+
+07/26/2022 14:22:20 - INFO - A_POS-0.05spars-expert-ML-imputed94cols 
+
+07/26/2022 14:22:20 - INFO - B_POS-0.2spars-expert-ML-imputed103cols 
+
+07/26/2022 14:22:20 - INFO - C_POS-0.5spars-expert-ML-imputed113cols 
+
+07/26/2022 14:22:20 - INFO - D_POS-0.8spars-expert-ML-imputed122cols 
+
+07/26/2022 14:22:20 - INFO - E_POS-1.0spars-expert-ML-imputed132cols 
+
+07/26/2022 14:22:20 - INFO - Processing 0_PRE-alan-heuristic7cols... 
+
+07/26/2022 14:22:55 - INFO - 9_PRE-1.0spars-expert-ML-imputed89cols 
+
+07/26/2022 14:22:55 - INFO - E_POS-1.0spars-expert-ML-imputed132cols 
+
+07/26/2022 14:23:01 - INFO - 9_PRE-1.0spars-expert-ML-imputed89cols 
+
+07/26/2022 14:23:01 - INFO - E_POS-1.0spars-expert-ML-imputed132cols 
+
+07/26/2022 14:23:03 - INFO - Processing 9_PRE-1.0spars-expert-ML-imputed89cols... 
+
+07/26/2022 14:23:44 - INFO -                                Dataset               Model Avg Accuracy SE Accuracy Avg AUC  SE AUC  Avg F1   SE F1
+9_PRE-1.0spars-expert-ML-imputed89cols Logistic Regression       0.7069      0.0115  0.7657  0.0126   0.615  0.0174
+9_PRE-1.0spars-expert-ML-imputed89cols       Random Forest       0.7245      0.0162  0.7712  0.0181  0.6208  0.0275
+9_PRE-1.0spars-expert-ML-imputed89cols             XGBoost       0.7008      0.0135  0.7599  0.0176  0.6048  0.0236 
+
+07/26/2022 14:23:44 - INFO - 
+----------The 1/3 (28 out of 84) most important features for Logistic Regression:---------- 
+
+07/26/2022 14:23:44 - INFO - PRE_systhe___radiation: 1.1317 
+
+07/26/2022 14:23:44 - INFO - PRE_num_closest_margins_trans: 0.8031 
+
+07/26/2022 14:23:44 - INFO - PRE_bra_cup_size: 0.6574 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_max_size_composite: 0.6182 
+
+07/26/2022 14:23:44 - INFO - PRE_int_mammary_lymphade_pet: 0.4823 
+
+07/26/2022 14:23:44 - INFO - PRE_lymph_node_max_size_mm: 0.4384 
+
+07/26/2022 14:23:44 - INFO - PRE_susp_LN_prsnt_composite: 0.4158 
+
+07/26/2022 14:23:44 - INFO - PRE_ax_surg___sln_biopsy: 0.4107 
+
+07/26/2022 14:23:44 - INFO - PRE_ax_surg___no_ax_surg: 0.3856 
+
+07/26/2022 14:23:44 - INFO - PRE_axillary_lymph_node_palpab: 0.3773 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___dcis: 0.3674 
+
+07/26/2022 14:23:44 - INFO - PRE_abnormal_lymph: 0.3517 
+
+07/26/2022 14:23:44 - INFO - PRE_metastatic_carcinoma_on_ax: 0.3459 
+
+07/26/2022 14:23:44 - INFO - PRE_img_size: 0.3433 
+
+07/26/2022 14:23:44 - INFO - PRE_her_status: 0.3075 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_stge: 0.3047 
+
+07/26/2022 14:23:44 - INFO - PRE_dximg___ultrasound: 0.2809 
+
+07/26/2022 14:23:44 - INFO - PRE_systhe___no_systhe: 0.2786 
+
+07/26/2022 14:23:44 - INFO - PRE_dximg___mammography: 0.2768 
+
+07/26/2022 14:23:44 - INFO - PRE_er_status: 0.2744 
+
+07/26/2022 14:23:44 - INFO - PRE_age_at_surg: 0.2627 
+
+07/26/2022 14:23:44 - INFO - PRE_bmi: 0.2619 
+
+07/26/2022 14:23:44 - INFO - PRE_high_grade_fdg_foci_presen: 0.2543 
+
+07/26/2022 14:23:44 - INFO - PRE_lymphovascular_invasion0: 0.246 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___idc: 0.2381 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_grade: 0.2341 
+
+07/26/2022 14:23:44 - INFO - PRE_systhe___chemo: 0.2224 
+
+07/26/2022 14:23:44 - INFO - PRE_axillary_lymph_node_max_si: 0.2183 
+
+07/26/2022 14:23:44 - INFO - 
+----------The 1/3 (28 out of 84) most important features for Random Forest:---------- 
+
+07/26/2022 14:23:44 - INFO - PRE_high_grade_fdg_foci_presen: 0.0491 
+
+07/26/2022 14:23:44 - INFO - PRE_sln_met_nomogram_prob: 0.0351 
+
+07/26/2022 14:23:44 - INFO - PRE_axillary_lymph_node_max_si: 0.0344 
+
+07/26/2022 14:23:44 - INFO - PRE_lymph_node_max_size_mm: 0.0337 
+
+07/26/2022 14:23:44 - INFO - PRE_num_closest_margins_trans: 0.0336 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_max_size_composite: 0.032 
+
+07/26/2022 14:23:44 - INFO - PRE_distance_from_closest_marg: 0.031 
+
+07/26/2022 14:23:44 - INFO - PRE_img_size: 0.0306 
+
+07/26/2022 14:23:44 - INFO - PRE_margin_status: 0.0303 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_size_mm: 0.0295 
+
+07/26/2022 14:23:44 - INFO - PRE_size_of_the_largest_foci_c: 0.0288 
+
+07/26/2022 14:23:44 - INFO - PRE_height_cm: 0.028 
+
+07/26/2022 14:23:44 - INFO - PRE_bra_cup_size: 0.028 
+
+07/26/2022 14:23:44 - INFO - PRE_weight_kg: 0.0278 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_stge: 0.0276 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_location: 0.0274 
+
+07/26/2022 14:23:44 - INFO - PRE_bmi: 0.0272 
+
+07/26/2022 14:23:44 - INFO - PRE_bi_rads_score: 0.0269 
+
+07/26/2022 14:23:44 - INFO - PRE_lymph_node_max_size_mm0: 0.0269 
+
+07/26/2022 14:23:44 - INFO - PRE_dob: 0.0247 
+
+07/26/2022 14:23:44 - INFO - PRE_age_at_dx: 0.0244 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_location_trans: 0.0243 
+
+07/26/2022 14:23:44 - INFO - PRE_age_at_surg: 0.0241 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___dcis: 0.0207 
+
+07/26/2022 14:23:44 - INFO - PRE_susp_LN_prsnt_composite: 0.0182 
+
+07/26/2022 14:23:44 - INFO - PRE_axillary_lymph_node_core_b: 0.0172 
+
+07/26/2022 14:23:44 - INFO - PRE_susp_LN_size_composite: 0.0156 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___idc: 0.0151 
+
+07/26/2022 14:23:44 - INFO - 
+----------The 1/3 (28 out of 84) most important features for XGBoost:---------- 
+
+07/26/2022 14:23:44 - INFO - PRE_susp_LN_prsnt_composite: 0.2343 
+
+07/26/2022 14:23:44 - INFO - PRE_imaging_and_biopsy_concord: 0.0547 
+
+07/26/2022 14:23:44 - INFO - PRE_systhe___radiation: 0.0485 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___dcis: 0.0405 
+
+07/26/2022 14:23:44 - INFO - PRE_metastatic_carcinoma_on_ax: 0.0379 
+
+07/26/2022 14:23:44 - INFO - PRE_ax_surg___ax_ln_dissect: 0.037 
+
+07/26/2022 14:23:44 - INFO - PRE_lymphovascular_invasion0: 0.0333 
+
+07/26/2022 14:23:44 - INFO - PRE_axillary_lymph_node_core_b: 0.027 
+
+07/26/2022 14:23:44 - INFO - PRE_his_subtype___idc: 0.0211 
+
+07/26/2022 14:23:44 - INFO - PRE_palpability: 0.0184 
+
+07/26/2022 14:23:44 - INFO - PRE_susp_LN_size_composite: 0.018 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_max_size_composite: 0.0152 
+
+07/26/2022 14:23:44 - INFO - PRE_surg_indicat_prim___primary_tx: 0.0149 
+
+07/26/2022 14:23:44 - INFO - PRE_her_status: 0.0148 
+
+07/26/2022 14:23:44 - INFO - PRE_high_grade_fdg_foci_presen: 0.0133 
+
+07/26/2022 14:23:44 - INFO - PRE_men_status: 0.0132 
+
+07/26/2022 14:23:44 - INFO - PRE_max_enhancement_measurment: 0.013 
+
+07/26/2022 14:23:44 - INFO - PRE_age_at_dx: 0.0117 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_stge: 0.0113 
+
+07/26/2022 14:23:44 - INFO - PRE_dximg___mammography: 0.0106 
+
+07/26/2022 14:23:44 - INFO - PRE_ax_surg___no_ax_surg: 0.0106 
+
+07/26/2022 14:23:44 - INFO - PRE_sln_met_nomogram_prob: 0.0104 
+
+07/26/2022 14:23:44 - INFO - PRE_age_at_surg: 0.0097 
+
+07/26/2022 14:23:44 - INFO - PRE_lymph_node_max_size_mm: 0.0094 
+
+07/26/2022 14:23:44 - INFO - PRE_pr_status: 0.0093 
+
+07/26/2022 14:23:44 - INFO - PRE_er_status: 0.009 
+
+07/26/2022 14:23:44 - INFO - PRE_num_closest_margins_trans: 0.0089 
+
+07/26/2022 14:23:44 - INFO - PRE_tumor_grade: 0.0087 
+
+07/26/2022 14:23:44 - INFO - ====================================================================================================================================================== 
+
+07/26/2022 14:23:44 - INFO - Processing E_POS-1.0spars-expert-ML-imputed132cols... 
+
+07/26/2022 14:24:06 - INFO - 9_PRE-1.0spars-expert-ML-imputed89cols 
+
+07/26/2022 14:24:06 - INFO - E_POS-1.0spars-expert-ML-imputed132cols 
+
