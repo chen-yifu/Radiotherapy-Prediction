@@ -4,7 +4,6 @@ from datetime import datetime
 from argparse import ArgumentParser
 global out_dir, input_dir
 
-
 # Parse Arguments
 parser = ArgumentParser()
 parser.add_argument(
@@ -14,7 +13,6 @@ parser.add_argument(
     help="path to the folder of pre-processed DataFrames"
 )
 args = parser.parse_args()
-    
 
 current_datetime_str = datetime.now().strftime("%Y-%m-%d_%H%M")
 # input_dir = "/Users/yifu/PycharmProjects/Radiotherapy-Prediction/data/output/2022-07-11-151005/DataFrames"
@@ -38,7 +36,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     NORMAL = '\033[0m'
-
 
 def custom_to_csv(df, out_dir, out_name, index=False):
     global df_idx

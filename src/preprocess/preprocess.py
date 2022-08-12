@@ -93,7 +93,8 @@ def preprocess(
     
 
     if "PRE_sln_met_nomogram_prob" not in df:
-        raise ValueError("Please apply nomogram on expert-imputed data for PRE_sln_met_nomogram_prob.")
+        print_and_log_w_header("Please apply nomogram on expert-imputed data for PRE_sln_met_nomogram_prob.")
+        return
     
     # Convert Time columns into Numeric columns
     df = time_to_numeric.time_to_numeric(df, df_metadata)

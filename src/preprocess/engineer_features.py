@@ -103,6 +103,7 @@ def engineer_features(
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
     tumor_max_size_composites = []
+    insitu_upstaged = []
 
     
     # Remove "ANN" prefix from record_id
@@ -210,6 +211,16 @@ def engineer_features(
                 else:
                     tumor_max_size_composite = max(tumor_max_size_composite, value)
         tumor_max_size_composites.append(tumor_max_size_composite)
+        
+        # If patient had in-situ PRE-op, and had invasive POST-op, then is upstaged
+        is_upstaged = np.nan
+        if row["PRE_his_subtype___lcis"] == 1 or row["PRE_his_subtype___dcis"] == 1:
+            if row["POS_his_type___idc"] == 1 or row["POS_his_type___ilc"] == 1:
+                is_upstaged = 1
+            else:
+                is_upstaged = 0
+        insitu_upstaged.append(is_upstaged)
+
 
     df.insert(
         list(df.columns).index("PRE_dob")+1,
@@ -250,6 +261,11 @@ def engineer_features(
         list(df.columns).index("PRE_img_size")+1,
         "PRE_tumor_max_size_composite",
         tumor_max_size_composites
+        )
+    df.insert(
+        list(df.columns).index("POS_specify_histology_if_other")+1,
+        "POS_insitu_upstaged",
+        insitu_upstaged
         )
     df.insert(
         list(df.columns).index("POS_tumor_loc")+1,
