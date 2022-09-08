@@ -9,8 +9,8 @@ class Data:
         config.Data = self
         
         metadata = pd.read_excel(metadata_path)
-        raw_df = pd.read_csv(raw_df_path).apply(pd.to_numeric, errors='coerce') if raw_df_path else None
-        processed_df = pd.read_csv(processed_df_path).apply(pd.to_numeric, errors='coerce') if processed_df_path else None
+        raw_df = pd.read_csv(raw_df_path).apply(pd.to_numeric, errors='coerce') if raw_df_path else pd.DataFrame()
+        processed_df = pd.read_csv(processed_df_path).apply(pd.to_numeric, errors='coerce') if processed_df_path else pd.DataFrame()
         processed_PRE_df = processed_df.copy()
         
         for column in processed_PRE_df.columns:
@@ -101,7 +101,8 @@ class Data:
     def list_df(self):
         """List all DataFrames in the storage."""
         df_names = list(self.storage.keys())
+        df_shapes = [df.shape for df in self.storage.values()]
         print(f"There are {len(df_names)} DataFrames in the storage: {df_names}.")
-        return df_names
+        return list(zip(df_names, df_shapes))
 
 

@@ -118,21 +118,42 @@ class DataProcessor:
         subset_cols=None, 
         cols_to_exclude=[],
     ) -> pd.DataFrame:
+        """Generate a DataFrame ready for training.
+
+        Args:
+            target_column (str): Name of the target column.
+            experiment_name (str): Name of the experiment.
+            seed (int): Random seed.
+            use_PRE_only (bool): Whether to use PRE only.
+            filter (function): Filter to apply to the data.
+            do_impute (bool, optional): Whether to impute missing values. Defaults to True.
+            impute_max_iter (int, optional): Maximum number of iterations for imputation. Defaults to 10.
+            verbose (bool, optional): Verbosity. Defaults to False.
+            subset_cols (_type_, optional): Subset of columns to use. Defaults to None.
+            cols_to_exclude (list, optional): Columns to exclude. Defaults to [].
+
+        Returns:
+            pd.DataFrame: DataFrame ready for training.
+        """
+        
         Data = config.Data
         df_name = experiment_name
         
-        if use_PRE_only:
-            X = Data.get_df("processed_PRE")
-        else:
-            X = Data.get_df("processed")
+
+        X = Data.get_df("processed").copy()
+
         if target_column in X.columns:
             X.drop(target_column, axis=1, inplace=True)
         if filter:
             orig_shape = X.shape
             X = filter(X)
+        if use_PRE_only:
+            cols_PRE = [col for col in X.columns if col.startswith("PRE_")]
+            X = X[cols_PRE]
+        if filter:
             print(f"Filtered {orig_shape[0] - X.shape[0]} rows, resulting in shape: {X.shape}")
         
-        temp_y = Data.get_df("processed")
+        temp_y = Data.get_df("processed").copy()
         y = temp_y[temp_y["PRE_record_id"].isin(X["PRE_record_id"])][target_column]
         X = self.standardize(X, target_column=None, verbose=verbose)
         Data.add_df(X, experiment_name, is_standardized=True)

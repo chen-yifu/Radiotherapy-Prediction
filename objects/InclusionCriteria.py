@@ -32,7 +32,7 @@ class InclusionCriteria():
         if self.exclude_pre_ln_positive:
             df = df[df["PRE_susp_LN_prsnt_composite"] == 0]
             print(f"Excluding pre-LN positive cases. {df.shape[0]} cases remain.") if verbose > 0 else None
-        if self.require_sln_biopsy and "POS_ax_surg___sln_biopsy" in df.columns:
+        if self.require_sln_biopsy:
             df = df[df["POS_ax_surg___sln_biopsy"] == 1]
             print(f"Excluding cases without SLN biopsy. {df.shape[0]} cases remain.") if verbose > 0 else None
         if self.require_invasive:
