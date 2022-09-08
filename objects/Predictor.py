@@ -72,8 +72,6 @@ class Predictor:
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             # Standardize X_train and X_test
-            # X_train = (X_train - X_train.mean()) / X_train.std()
-            # X_test = (X_test - X_test.mean()) / X_test.std()
             models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
             for name, (model, feature_score__key) in models.items():
                 print(f"Training {name}...", end=" ")

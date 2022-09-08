@@ -139,44 +139,31 @@ class DataProcessor:
         Data = config.Data
         df_name = experiment_name
         
-
-        X = Data.get_df("processed").copy()
-
-        if target_column in X.columns:
-            X.drop(target_column, axis=1, inplace=True)
+        df = Data.get_df("processed").copy()
         if filter:
-            orig_shape = X.shape
-            X = filter(X)
-        if use_PRE_only:
-            cols_PRE = [col for col in X.columns if col.startswith("PRE_")]
-            X = X[cols_PRE]
-        if filter:
-            print(f"Filtered {orig_shape[0] - X.shape[0]} rows, resulting in shape: {X.shape}")
-        
-        temp_y = Data.get_df("processed").copy()
-        y = temp_y[temp_y["PRE_record_id"].isin(X["PRE_record_id"])][target_column]
-        X = self.standardize(X, target_column=None, verbose=verbose)
-        Data.add_df(X, experiment_name, is_standardized=True)
-        X = self.impute(X, target_column=None, max_iter=impute_max_iter, verbose=True, seed=seed)    
-        X_and_y = pd.concat([X, y], axis=1)
-        # display(X_and_y)
-        X_and_y = X_and_y.dropna(axis=0, subset=[target_column])
-        # Drop rows with all NaNs
-        X_and_y = X_and_y.dropna(axis=0, how="all")
-        if subset_cols is not None:
-            X_and_y = X_and_y[[col for col in subset_cols if col in X_and_y.columns]+[target_column]]
+            df = filter(df)
         if cols_to_exclude:
-            X_and_y = X_and_y.drop([col for col in cols_to_exclude if col in X_and_y.columns], axis=1)
-        # Drop rows with NaNs from X_and_y
-        X_and_y = X_and_y.dropna(axis=0, how="any")
-        
-        # display(X_and_y)
-        if verbose and X_and_y.isna().sum().sum() > 0:
-            print(f"Warning: {X_and_y.isna().sum().sum()} missing values in dataframe.")
-            # display(X_and_y)
-        
-        assert X_and_y.isna().sum().sum() == 0
-        
+            df = df.drop([col for col in cols_to_exclude if col in df.columns], axis=1)
+        if use_PRE_only:
+            df = df[[col for col in df.columns if col.startswith("PRE_")] + [target_column]]
+        if subset_cols is not None:
+            df = df[[col for col in subset_cols if col in df.columns]+[target_column]]
+        df = df.reset_index(drop=True)
+        X = df.drop(target_column, axis=1)
+        y = df[target_column]
+        # display(df)
+        # print("df shape:", df.shape)
+        # print("X.shape, y.shape", X.shape, y.shape)
+        X = self.standardize(X, target_column=None, verbose=verbose)
+        # print("X.shape after standardization", X.shape)
+        X = self.impute(X, target_column=None, max_iter=impute_max_iter, verbose=True, seed=seed)
+        # print("X.shape after imputation", X.shape)
+        X_and_y = pd.concat([X, y], axis=1)
+        # print("X_and_y shape:", X_and_y.shape)
+        # X_and_y = X_and_y.dropna(axis=0, how="any")
+        # if verbose and X_and_y.isna().sum().sum() > 0:
+        #     print(f"Warning: {X_and_y.isna().sum().sum()} missing values in dataframe.")
+        # assert X_and_y.isna().sum().sum() == 0
         for col in cols_to_exclude:
             assert col not in X_and_y.columns
         

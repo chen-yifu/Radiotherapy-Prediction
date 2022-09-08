@@ -24,19 +24,23 @@ class InclusionCriteria():
 
         Returns:
             pd.DataFrame: Filtered DataFrame.
+        
+        Note: 
+        If DataFrame was standardized, hence values are not necessarily 0 or 1.
+        Since original values are 0 or 1, they will be negative and positive, respectively.
         """
         orig_shape = df.shape
         if self.exclude_neoadjuvant:
-            df = df[df["PRE_systhe___no_systhe"] == 1]
+            df = df[df["PRE_systhe___no_systhe"] > 0]
             print(f"Excluding cases with neoadjuvant systemic therapy. {df.shape[0]} cases remain.") if verbose > 0 else None
         if self.exclude_pre_ln_positive:
-            df = df[df["PRE_susp_LN_prsnt_composite"] == 0]
+            df = df[df["PRE_susp_LN_prsnt_composite"] <= 0]
             print(f"Excluding pre-LN positive cases. {df.shape[0]} cases remain.") if verbose > 0 else None
         if self.require_sln_biopsy:
-            df = df[df["POS_ax_surg___sln_biopsy"] == 1]
+            df = df[df["POS_ax_surg___sln_biopsy"] > 0]
             print(f"Excluding cases without SLN biopsy. {df.shape[0]} cases remain.") if verbose > 0 else None
         if self.require_invasive:
-            df = df[df["PRE_his_subtype_is_invasive_composite"] == 1]
+            df = df[df["PRE_his_subtype_is_invasive_composite"] > 0]
             print(f"Excluding cases without invasive histology. {df.shape[0]} cases remain.") if verbose > 0 else None
             
         if verbose > 0:
