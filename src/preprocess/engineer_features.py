@@ -52,6 +52,17 @@ def engineer_features(
                 location_trans = np.nan
         return location_trans
     
+    
+    def get_is_uiq(location_trans):
+        # Decides whether tumor is located in upper-inner quadrant
+        assert type(location_trans) in [int, None, np.nan, str, float]
+        
+        if str(location_trans).isnumeric() and int(location_trans) in [-12, -1, -2, -3, 9, 10, 11, 12]:
+            return 1
+        else:
+            return 0
+        
+        
     # Construct new columns from existing data
     print_and_log_w_header("Feature Engineering...")
     
@@ -98,12 +109,15 @@ def engineer_features(
     age_at_surg = []
     bmis = []
     pre_tumor_location_trans = []
+    pre_tumor_location_is_UIQ = []
     pos_tumor_location_trans = []
-    margins_trans = []
+    pos_tumor_location_is_UIQ = []
+    # margins_trans = []
     susp_LN_size_composites = []
     susp_LN_prsnt_composites = []
     tumor_max_size_composites = []
     insitu_upstaged = []
+    his_subtype_is_invasives = []
 
     
     # Remove "ANN" prefix from record_id
@@ -117,7 +131,9 @@ def engineer_features(
         lambda x: re.sub(r'R', '.1', str(x)))
 
     
-    for _, row in tqdm(df.iterrows()):
+    
+    # for _, row in tqdm(df.iterrows()):
+    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
         # transformation for tumor location
         la = str(row["PRE_tumor_laterality"]).strip().lower()
         pre_lo = str(row["PRE_tumor_location"]).strip().lower()
@@ -129,15 +145,17 @@ def engineer_features(
         if str(pre_location_trans) != "nan":
             print(f"Location trans of {la} {pos_lo}: {pos_location_trans}, patient: {row['PRE_record_id']}")
         pre_tumor_location_trans.append(pre_location_trans)
+        pre_tumor_location_is_UIQ.append(get_is_uiq(pre_location_trans))
         pos_tumor_location_trans.append(pos_location_trans)
+        pos_tumor_location_is_UIQ.append(get_is_uiq(pos_location_trans))
         # transformation for margins
-        margin = row["PRE_closest_margin"]
-        if str(margin) == "nan":
-            margin_tran = np.nan
-        else:
-            margin_tran = len(re.split(",|and", str(margin)))
-            print(f"{row['PRE_record_id']} margins_trans: {margin_tran}")
-        margins_trans.append(margin_tran)
+        # margin = row["PRE_closest_margin"]
+        # if str(margin) == "nan":
+        #     margin_tran = np.nan
+        # else:
+        #     margin_tran = len(re.split(",|and", str(margin)))
+        #     print(f"{row['PRE_record_id']} margins_trans: {margin_tran}")
+        # margins_trans.append(margin_tran)
         
         # Use pre_op_biopsy_date_year or surgery_date_year - dob
         # to construct "age_at_dx" as the age at the time of diagnosis
@@ -150,8 +168,8 @@ def engineer_features(
         else:
             years_elapsed = round(dx_date - dob)
             age_at_dxs.append(years_elapsed)
-            # print(f"{row['PRE_record_id']} age_at_dx: "
-            #       f"{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
+            print(f"{row['PRE_record_id']} age_at_dx: "
+                  f"{years_elapsed}, dob: {dob}, dx_date: {dx_date}")
         
         # Construct "age_at_surg"
         # surg_date = pd.to_datetime(row["PRE_surgery_date"])
@@ -161,6 +179,8 @@ def engineer_features(
         else:
             years_elapsed = round(surg_date - dob)
             age_at_surg.append(years_elapsed)
+            print('row["PRE_surgery_date"], row["PRE_dob"], years_elapsed', 
+                  row["PRE_surgery_date"], row["PRE_dob"], years_elapsed)
             print(f"{row['PRE_record_id']} age_at_surg: "
                   f"{years_elapsed}, dob: {dob}, surg_date: {surg_date}")
         
@@ -220,54 +240,81 @@ def engineer_features(
             else:
                 is_upstaged = 0
         insitu_upstaged.append(is_upstaged)
+        
+        # If patient had IDC, ILC, LCIS, or invasive mucinous, then his_subtype_is_invasive is 1
+        his_subtype_is_invasive = np.nan
+        if row["PRE_his_subtype___idc"] == 1 or row["PRE_his_subtype___ilc"] == 1 \
+            or row["PRE_his_subtype___inv_mucinous"] == 1 or row["PRE_his_subtype___papillary"] == 1:
+            his_subtype_is_invasive = 1
+        else:
+            his_subtype_is_invasive = 0
+        his_subtype_is_invasives.append(his_subtype_is_invasive)
 
-
-    df.insert(
-        list(df.columns).index("PRE_dob")+1,
-        "PRE_age_at_dx",
-        age_at_dxs
-        )
-    df.insert(
+    def insert_if_not_exist(df, col_index, col_name, col_values):
+        if col_name not in df.columns:
+            df.insert(col_index, col_name, col_values)
+        else:
+            df[col_name] = col_values
+    
+    insert_if_not_exist(df,
+            list(df.columns).index("PRE_dob")+1,
+            "PRE_age_at_dx",
+            age_at_dxs
+            )
+    
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_tumor_location")+1,
         "PRE_tumor_location_trans",
         pre_tumor_location_trans
+    )    
+        
+    insert_if_not_exist(df,
+        list(df.columns).index("PRE_tumor_location")+2,
+        "PRE_tumor_location_is_uiq",
+        pre_tumor_location_is_UIQ
     )
-    df.insert(
-        list(df.columns).index("PRE_closest_margin")+1,
-        "PRE_num_closest_margins_trans",
-        margins_trans
-    )
-    df.insert(
+    
+    # insert_if_not_exist(df,
+    #     list(df.columns).index("PRE_closest_margin")+1,
+    #     "PRE_num_closest_margins_trans",
+    #     margins_trans
+    # )
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_age_at_dx")+1,
         "PRE_age_at_surg",
         age_at_surg
         )
-    df.insert(
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_height_cm")+1,
         "PRE_bmi",
         bmis
         )
-    df.insert(
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_lymph_node_max_size_mm")+1,
         "PRE_susp_LN_size_composite",
         susp_LN_size_composites
         )
-    df.insert(
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_abnormal_lymph")+1,
         "PRE_susp_LN_prsnt_composite",
         susp_LN_prsnt_composites
         )
-    df.insert(
+    insert_if_not_exist(df,
         list(df.columns).index("PRE_img_size")+1,
         "PRE_tumor_max_size_composite",
         tumor_max_size_composites
         )
-    df.insert(
+    insert_if_not_exist(df,
+        list(df.columns).index("PRE_his_subtype___idc")-1,
+        "PRE_his_subtype_is_invasive_composite",
+        his_subtype_is_invasives
+    )
+    insert_if_not_exist(df,
         list(df.columns).index("POS_specify_histology_if_other")+1,
         "POS_insitu_upstaged",
         insitu_upstaged
         )
-    df.insert(
+    insert_if_not_exist(df,
         list(df.columns).index("POS_tumor_loc")+1,
         "POS_tumor_location_trans",
         pre_tumor_location_trans

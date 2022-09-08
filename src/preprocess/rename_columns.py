@@ -9,12 +9,18 @@ def rename_columns(df, df_metadata):
     rename_dict = {}
     # Append prefix and suffix to columns
     for col in tqdm(df.columns):
-        print(col)
+        print("Adding prefix to column: ", col)
         row = df_metadata.loc[df_metadata["Original Field Name"] == col]
+        if row.empty:
+            row = df_metadata.loc[df_metadata["Field"] == col]
+        if row.empty:
+            print("Column not found in metadata: ", col)
+            continue
         prefix = row["Group"].item()
         rename_dict[col] = prefix+"_"+col
     df.rename(columns=rename_dict, inplace=True)
 
+    print(list(df.columns))
     # Perform renaming for specific columns
     rename_dict = {
         "PRE_gensus___1" : "PRE_gensus___brca1",
@@ -43,9 +49,9 @@ def rename_columns(df, df_metadata):
         "PRE_surgical_indication1_primary_treatment___3": "PRE_surg_indicat_prim___compl_mast_marg+_bcs",
         "PRE_surgical_indication1_primary_treatment___4": "PRE_surg_indicat_prim___recurrent_cancer",
         "PRE_surgical_indication1_primary_treatment___5": "PRE_surg_indicat_prim___second_primary",
-        "PRE_axillary_surgery___1": "PRE_ax_surg___no_ax_surg",
-        "PRE_axillary_surgery___2": "PRE_ax_surg___sln_biopsy",
-        "PRE_axillary_surgery___3": "PRE_ax_surg___ax_ln_dissect",
+        "POS_axillary_surgery___1": "POS_ax_surg___no_ax_surg",
+        "POS_axillary_surgery___2": "POS_ax_surg___sln_biopsy",
+        "POS_axillary_surgery___3": "POS_ax_surg___ax_ln_dissect",
         "POS_his_type___1": "POS_his_type___idc",
         "POS_his_type___2": "POS_his_type___ilc",
         "POS_his_type___3": "POS_his_type___dcis",

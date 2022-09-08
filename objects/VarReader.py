@@ -70,7 +70,7 @@ class VarReader:
     def is_dtype_categorical(self, dtype):
         if dtype in ["radio", "checkbox", "yesno", "categorical", "ordinal"]:
             return True
-        elif dtype in ["numeric", "date", "datetime", "time"]:
+        elif dtype in ["numeric", "date", "datetime", "time", "real", "integer", "float", "text"]:
             return False
         else:
-            raise ValueError(f"Unknown dtype: {dtype}")
+            raise ValueError(f"Unknown dtype: '{dtype}'.")
