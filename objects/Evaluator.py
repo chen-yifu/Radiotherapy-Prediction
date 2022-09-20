@@ -2,6 +2,7 @@ import config
 import re
 import time
 from collections import OrderedDict
+from objects.InclusionCriteria import InclusionCriteria
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +20,13 @@ from sklearn.metrics import roc_auc_score
 from sklearn.calibration import calibration_curve
 from sklearn.preprocessing import label_binarize
 from sklearn.linear_model import HuberRegressor
+from IPython.display import display, HTML
+import scipy.stats as stats
+from scipy.stats import f_oneway
+from scipy.stats import chi2_contingency
+from scipy.stats import ttest_ind
+from scipy.stats import pearsonr
+from scipy.stats import ttest_1samp
         
 pd.options.mode.chained_assignment = None
 
@@ -196,7 +204,16 @@ class Evaluator:
         ax.set_title(f'Precision-Recall Curve\n(Avg Precision = {round(average_precision, 4)})')
         return ax
     
-    def evaluate_predictions(self, df: pd.DataFrame, pred_col_prob: str, pred_col_class, target_column: str, title: str, show_results=True, threshold=None):
+    def evaluate_predictions(
+        self, 
+        df: pd.DataFrame, 
+        pred_col_prob: str, 
+        pred_col_class, 
+        target_column: str, 
+        title: str, 
+        show_results=True, 
+        threshold=None
+        ):
         # Drop rows where the target_col is NaN
         df = df.copy()
         df[pred_col_prob] = pd.to_numeric(df[pred_col_prob], errors="coerce")
@@ -272,7 +289,14 @@ class Evaluator:
 
         return result
 
-    def find_threshold(self, df, pred_col_prob, pred_col_class, truth_col, metric="accuracy"):
+    def find_threshold(
+        self, 
+        df, 
+        pred_col_prob, 
+        pred_col_class, 
+        truth_col, 
+        metric="accuracy"
+        ):
         best_metric = 0
         best_threshold = 0
         for i in range(0, 100, 1):
@@ -309,9 +333,17 @@ class Evaluator:
     def evaluate_experiment(self, VarReader, target_column, experiment_name, results, show_results=False):
         model_eval_results = {}
         result_df = results[experiment_name]["result_df"]
+        #     display(result_df)
         # result_df = result_df[~result_df[get_nomogram_columns(target_column)].isna().any(axis=1)]
         # result_df = result_df[result_df["PRE_susp_LN_prsnt_composite"] > 0]
-        print("Evaluating experiment result of shape", result_df.shape)
+        InclusionCriteria = config.InclusionCriteria
+        eligibility_dict = InclusionCriteria.get_eligibility_dict(standardized=True)
+        if eligibility_dict is not None:
+            # display(result_df)
+            result_df = result_df[result_df["PRE_record_id"].map(eligibility_dict)]
+            print(f"Inclusion criteria applied. {len(result_df)} records remain eligible.")
+        
+        print(f"Evaluating experiment '{experiment_name}' of shape {result_df.shape}")
         for pred_col_prob, pred_col_class, model_name in zip(results[experiment_name]["prob_columns"], results[experiment_name]["class_columns"], results[experiment_name]["model_names"]):
             if show_results:
                 print("-"*50, model_name, "-"*50)
@@ -322,15 +354,26 @@ class Evaluator:
                 pred_col_prob,
                 pred_col_class,
                 target_column=target_column,
-                title=pred_col_prob,
-                show_results=show_results
+                title=f"{pred_col_prob} (N={len(result_df)})" ,
+                show_results=show_results and model_name in config.models_to_show
             ) 
             model_eval_results[model_name] = eval_result
 
         return model_eval_results
 
     
-    def plot_calibration_curve(self, results, target_df, valid_idx, target_column, pred_column, experiment_name, model_name, show_plot=True, verbose=False):
+    def plot_calibration_curve(
+        self, 
+        results, 
+        target_df, 
+        valid_idx, 
+        target_column, 
+        pred_column, 
+        experiment_name, 
+        model_name, 
+        show_plot=True, 
+        verbose=False
+        ):
 
         target_df = target_df.loc[valid_idx]
         target_true = target_df[target_column]
@@ -373,4 +416,122 @@ class Evaluator:
         #     "elastic_net_auc": elastic_net_auc,
              
         # }
-    # def compare_classification_models(self, df, pred_col
+    
+    
+    def get_significance_level(self, p_value):
+        if p_value < 0.001:
+            return "***"
+        elif p_value < 0.01:
+            return "**"
+        elif p_value < 0.05:
+            return "*"
+        else:
+            return "ns"
+        
+        
+    
+    def get_feature_stat_significance(
+        self, 
+        df_ready, 
+        subset_cols, 
+        subset_cols_name, 
+        target_column, 
+        target_type="categorical"
+        ):
+        temp_df = df_ready.copy()
+        print("-"*20, f"stat. significance between {target_column} and", subset_cols_name, "-"*20)
+        col2pval = {}
+        for column in subset_cols:
+            if column not in temp_df.columns:
+                continue
+            try:
+                if column != target_column:
+                    # Calculate the p-value while ignoring NaNs in both columns
+                    temp_df_column = temp_df[[column, target_column]].dropna()
+                    num_unique = len(temp_df_column[column].unique())
+                    if num_unique > 5:
+                        col_type = "continuous"
+                    elif num_unique <= 1:
+                        continue
+                    else:  # i.e., 2 <= num_unique <= 5
+                        col_type = "categorical"
+                    if target_type == "categorical" and col_type == "categorical":
+                        # Use the chi-squared test
+                        test_name = "Chi^2"
+                        chi2, p, dof, expected = chi2_contingency(pd.crosstab(temp_df_column[column], temp_df_column[target_column]))
+                    elif target_type == "categorical" and col_type == "continuous":
+                        # Use the ANOVA test
+                        test_name = "ANOVA/t-test"
+                        f_stat, p = f_oneway(*[group[column].dropna().values for name, group in temp_df_column.groupby(target_column)])
+                    elif target_type == "continuous" and col_type == "categorical":
+                        pass
+                    else:
+                        pass
+                    col2pval[column] = p
+                        
+            except Exception as e:
+                # print(f"Error with column {column}: {e}")    
+                raise e
+        
+        if len(col2pval) > 0:
+            # Delete entries with NaN p-values
+            col2pval = {k: v for k, v in col2pval.items() if not np.isnan(v)}
+            # col2pval = {(str(k[0]), str(k[1]), str(k[2])): v for k, v in col2pval.items() if not np.isnan(v)}
+            # Sort and print the p-values in ascending order
+            sorted_pvals = sorted(col2pval.items(), key=lambda x: x[1])
+            # max_col1 = max([len(x[0][0]) for x in sorted_pvals])
+            # max_col2 = max([len(x[0][1]) for x in sorted_pvals])
+            # max_test_name = max([len(x[0][2]) for x in sorted_pvals]
+            max_len = max([len(x[0]) for x in sorted_pvals])
+            for col1, p in sorted_pvals:
+                significance_level = self.get_significance_level(p)
+                print(f"{col1: <{max_len}}: {p:.8f} {significance_level}")
+                        
+            return col2pval
+        else:
+            return None
+    
+    # def plot_experiment_groups_aucs(self, group_to_aucs, target_column):
+    #     """Given a dictionary with schema: {group_name: [aucs], ...}, plot the mean and SE of AUC for each group
+
+    #     Args:
+    #         group_to_mean_auc (_type_): _description_
+    #         target_column (_type_): _description_
+    #     """
+    #     num_groups = len(group_to_aucs[experiment_name].keys())
+    #     model2idx = {model_name: i for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
+    #     idx2model = {i: model_name for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
+    #     for col_i, (target_column, experiment_name, subset_cols, _) in enumerate(Experiment):
+    #         auc_mean, auc_se = [], []
+    #         for model_name, aucs in model_to_aucs[experiment_name].items():
+    #             auc_mean.append(np.mean(aucs))
+    #             auc_se.append(np.std(aucs) / np.sqrt(num_repeat))
+    #             group_to_aucs[experiment_name][model_name] = np.mean(aucs)
+
+    #     x = np.arange(num_groups)  # the label locations
+    #     x_to_aucs = [[] for _ in range(num_groups)]
+    #     x_to_auc_ses = [[] for _ in range(num_groups)]
+    #     for experiment_name in group_to_aucs.keys():
+    #         if target_column in experiment_name:
+    #             for model_name, auc in group_to_aucs[experiment_name].items():
+    #                 x_to_aucs[model2idx[model_name]].append((auc, experiment_name))
+
+
+    #     fig, ax = plt.subplots(figsize=(num_groups*1.5, num_groups*1.5))
+    #     width = 1/(len(x_to_aucs[0])*1.2)
+    #     experiment2color = {experiment_name: f"C{i}" for i, experiment_name in enumerate(group_to_aucs.keys()) if target_column in experiment_name}
+    #     for i, aucs_and_experiments in enumerate(x_to_aucs):
+    #         for j, (auc, experiment_name) in enumerate(aucs_and_experiments):
+    #             x_loc = x[i] + width*j
+    #             plt.bar(x_loc, auc, width, label=experiment_name, color=experiment2color[experiment_name], alpha=0.8)
+    #             plt.text(x_loc, auc, f"{auc:.2f}", color="black", fontweight="bold", fontsize=6, ha="center", va="bottom")
+
+    #     plt.xticks(x+width*(len(aucs_and_experiments)-1)/2, idx2model.values(), rotation=45)
+    #     plt.ylabel("AUC (SE)")
+    #     plt.title(f"{target_column}")
+    #     # Write experiment names to legend
+    #     handles, labels = ax.get_legend_handles_labels()
+    #     by_label = dict(zip(labels, handles))
+    #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=12)
+    #     plt.grid(axis="y", alpha=0.5)
+    #     plt.show()

@@ -106,3 +106,10 @@ class Data:
         return list(zip(df_names, df_shapes))
 
 
+    def get_default_df(self):
+        """Get the default DataFrame.
+
+        Returns:
+            pd.DataFrame: The default DataFrame.
+        """
+        return self.processed_df

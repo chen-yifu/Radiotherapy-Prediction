@@ -140,14 +140,18 @@ class DataProcessor:
         df_name = experiment_name
         
         df = Data.get_df("processed").copy()
-        if filter:
+        if filter is not None:
             df = filter(df)
         if cols_to_exclude:
             df = df.drop([col for col in cols_to_exclude if col in df.columns], axis=1)
         if use_PRE_only:
             df = df[[col for col in df.columns if col.startswith("PRE_")] + [target_column]]
         if subset_cols is not None:
-            df = df[[col for col in subset_cols if col in df.columns]+[target_column]]
+            if "PRE_record_id" in subset_cols:
+                df = df[[col for col in subset_cols if col in df.columns]+[target_column]]
+            else:
+                df = df[[col for col in subset_cols if col in df.columns]+[target_column, "PRE_record_id"]]
+        
         df = df.reset_index(drop=True)
         X = df.drop(target_column, axis=1)
         y = df[target_column]
@@ -168,7 +172,7 @@ class DataProcessor:
             assert col not in X_and_y.columns
         
         df_name = Data.add_df(X_and_y, df_name, is_PRE_only=use_PRE_only, is_PRE_and_POS=not use_PRE_only, is_ready=True)
-        print(f"The shape of the {df_name} dataframe is {X_and_y.shape}")
+        print(f"There are {len(X_and_y.columns)} columns in the ready DataFrame.")
         
         return Data.get_df(df_name)
     

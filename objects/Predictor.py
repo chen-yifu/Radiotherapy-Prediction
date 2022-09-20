@@ -30,7 +30,7 @@ class Predictor:
         df_ready: pd.DataFrame,
         target_column: str,
         k_fold: int,
-        verbose: bool=False,
+        verbose: bool=True,
         use_full_model=True,
         classification_task=True,
         seed=42,
@@ -51,6 +51,8 @@ class Predictor:
         X = df_ready.dropna(axis=0, subset=[target_column])
         y = X[target_column]
         X = X.drop(target_column, axis=1)
+        # record_ids = X["PRE_record_id"]
+        # X = X.drop("PRE_record_id", axis=1)
         if verbose:
             print(f"Predicting target column {target_column} with {k_fold}-fold cross-validation.")
             print(f"Dropped {len(df_ready) - len(X)} rows with NaN in {target_column}; There are {len(X)} rows left.")
@@ -66,10 +68,12 @@ class Predictor:
         prob_cols = set()
         class_cols = set()
         model_names = set()
+        print("The shape of training data is", X.shape)
         for i, (train_index, test_index) in enumerate(kf.split(X, y)):
             # if verbose:
             print(f"Fold {i+1}...", end=" ")
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            X_train, X_test = X_train.drop("PRE_record_id", axis=1), X_test.drop("PRE_record_id", axis=1)
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             # Standardize X_train and X_test
             models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
@@ -105,7 +109,9 @@ class Predictor:
         if verbose:
             print("\n")
 
+        assert len(predictions) == len(df_ready), f"len(predictions)={len(predictions)}, len(df_ready)={len(df_ready)}"
         result_df = pd.concat([predictions, df_ready], axis=1)
+        
         # Sort the scores using OrderedDict by absolute value
         for name, scores in feature_scores.items():
             feature_scores[name] = OrderedDict(sorted(scores, key=lambda x: abs(x[1]), reverse=True))
@@ -164,20 +170,3 @@ class Predictor:
         """Get the names of the models."""
         return sorted(list(self.initialize_models(use_full_model=False, verbose=False, classification_task=classification_task).keys()))
 
-
-    def generate_experiments(self, target_columns, subset_columns, subset_columns_names, use_PRE_onlys):
-        experiment_names = []
-        ret_target_columns = []
-        ret_subset_columns = []
-        ret_use_PRE_onlys = [] 
-        for use_PRE_only in use_PRE_onlys:
-            for target_col in target_columns:
-                for subset_col, subset_col_name in zip(subset_columns, subset_columns_names):
-                    experiment_name = f"{target_col}_{subset_col_name}_{'PRE' if use_PRE_only else 'PRE_and_POS'}"
-                    experiment_names.append(experiment_name)
-                    ret_target_columns.append(target_col)
-                    ret_subset_columns.append(subset_col)
-                    ret_use_PRE_onlys.append(use_PRE_only)
-        assert len(experiment_names) == len(ret_target_columns) == len(ret_subset_columns)
-        print(f"Generated {len(experiment_names)} experiments using {len(target_columns)} target columns and {len(subset_columns)} subset columns.")
-        return ret_target_columns, ret_subset_columns, experiment_names, ret_use_PRE_onlys
