@@ -1,6 +1,7 @@
 import config
 import re
 import time
+import os
 from collections import OrderedDict
 from objects.InclusionCriteria import InclusionCriteria
 import seaborn as sns
@@ -281,7 +282,7 @@ class Evaluator:
             self.plot_cross_tab(df_prediction, pred_col_class, target_column, ax[1, 1], plot_missing=False)
             self.plot_cross_tab(df_prediction, pred_col_prob, target_column, ax[1, 0], plot_missing=False, threshold=threshold)
             fig.tight_layout()
-            plt.show()
+            self.show_plot_and_save(title)
             print(f"Accuracy: {result['accuracy']}, ", f"F1: {result['f1']}, ", f"AUC: {result['auc']} ")
             print(f"Precision: {result['precision']}, ", f"Recall: {result['recall']}, ", f"Specificity: {result['specificity']}")
             print(f"{result['classification_report']}")
@@ -330,21 +331,21 @@ class Evaluator:
         return nomogram_eval
 
 
-    def evaluate_experiment(self, VarReader, target_column, experiment_name, results, show_results=False):
+    def evaluate_experiment(self, VarReader, target_column, experiment_name, results, inclusion_criteria, show_results=False):
         model_eval_results = {}
         result_df = results[experiment_name]["result_df"]
         #     display(result_df)
         # result_df = result_df[~result_df[get_nomogram_columns(target_column)].isna().any(axis=1)]
         # result_df = result_df[result_df["PRE_susp_LN_prsnt_composite"] > 0]
-        InclusionCriteria = config.InclusionCriteria
-        eligibility_dict = InclusionCriteria.get_eligibility_dict(standardized=True)
+        # InclusionCriteria = config.InclusionCriteria
+        eligibility_dict = inclusion_criteria.get_eligibility_dict(standardized=True)
         if eligibility_dict is not None:
             # display(result_df)
             result_df = result_df[result_df["PRE_record_id"].map(eligibility_dict)]
             print(f"Inclusion criteria applied. {len(result_df)} records remain eligible.")
         
-        print(f"Evaluating experiment '{experiment_name}' of shape {result_df.shape}")
         for pred_col_prob, pred_col_class, model_name in zip(results[experiment_name]["prob_columns"], results[experiment_name]["class_columns"], results[experiment_name]["model_names"]):
+            show_results = show_results and model_name in config.models_to_show
             if show_results:
                 print("-"*50, model_name, "-"*50)
             VarReader.add_var(pred_col_prob, section="ML", dtype="numeric", label=f"Predicted Probability", options=dict(VarReader.read_var_attrib(target_column, has_missing=False)["options"]))
@@ -355,11 +356,13 @@ class Evaluator:
                 pred_col_class,
                 target_column=target_column,
                 title=f"{pred_col_prob} (N={len(result_df)})" ,
-                show_results=show_results and model_name in config.models_to_show
+                show_results=show_results
             ) 
             model_eval_results[model_name] = eval_result
+        
 
-        return model_eval_results
+        eval_num_records = len(result_df[result_df[target_column].notna()])
+        return model_eval_results, eval_num_records
 
     
     def plot_calibration_curve(
@@ -405,12 +408,15 @@ class Evaluator:
         plt.legend(loc="lower right", prop={"size": 8})
         plt.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
         if show_plot:
-            plt.show()
+            # plt.show()
+            self.show_plot_and_save(f"{experiment_name}_{model_name}_calibration_curve")
         
         pred_probs.hist(bins=100, label=f"{model_name}", alpha=0.5)
         plt.legend()
         if show_plot:
-            plt.show()
+            # plt.show()
+            self.show_plot_and_save(f"{experiment_name}_{model_name}_histogram")
+            # plt.show()
         
         # return {
         #     "elastic_net_auc": elastic_net_auc,
@@ -491,47 +497,58 @@ class Evaluator:
         else:
             return None
     
-    # def plot_experiment_groups_aucs(self, group_to_aucs, target_column):
-    #     """Given a dictionary with schema: {group_name: [aucs], ...}, plot the mean and SE of AUC for each group
+    
+    def show_plot_and_save(self, plot_name):
+        " Show the plot and save it to the output directory "
+        results_dir = config.results_dir
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        plt.savefig(os.path.join(results_dir, plot_name))
+        plt.show()
+        # plt.close()
+        
+        
+        # def plot_experiment_groups_aucs(self, group_to_aucs, target_column):
+        #     """Given a dictionary with schema: {group_name: [aucs], ...}, plot the mean and SE of AUC for each group
 
-    #     Args:
-    #         group_to_mean_auc (_type_): _description_
-    #         target_column (_type_): _description_
-    #     """
-    #     num_groups = len(group_to_aucs[experiment_name].keys())
-    #     model2idx = {model_name: i for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
-    #     idx2model = {i: model_name for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
-    #     for col_i, (target_column, experiment_name, subset_cols, _) in enumerate(Experiment):
-    #         auc_mean, auc_se = [], []
-    #         for model_name, aucs in model_to_aucs[experiment_name].items():
-    #             auc_mean.append(np.mean(aucs))
-    #             auc_se.append(np.std(aucs) / np.sqrt(num_repeat))
-    #             group_to_aucs[experiment_name][model_name] = np.mean(aucs)
+        #     Args:
+        #         group_to_mean_auc (_type_): _description_
+        #         target_column (_type_): _description_
+        #     """
+        #     num_groups = len(group_to_aucs[experiment_name].keys())
+        #     model2idx = {model_name: i for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
+        #     idx2model = {i: model_name for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
+        #     for col_i, (target_column, experiment_name, subset_cols, _) in enumerate(Experiment):
+        #         auc_mean, auc_se = [], []
+        #         for model_name, aucs in model_to_aucs[experiment_name].items():
+        #             auc_mean.append(np.mean(aucs))
+        #             auc_se.append(np.std(aucs) / np.sqrt(num_repeat))
+        #             group_to_aucs[experiment_name][model_name] = np.mean(aucs)
 
-    #     x = np.arange(num_groups)  # the label locations
-    #     x_to_aucs = [[] for _ in range(num_groups)]
-    #     x_to_auc_ses = [[] for _ in range(num_groups)]
-    #     for experiment_name in group_to_aucs.keys():
-    #         if target_column in experiment_name:
-    #             for model_name, auc in group_to_aucs[experiment_name].items():
-    #                 x_to_aucs[model2idx[model_name]].append((auc, experiment_name))
+        #     x = np.arange(num_groups)  # the label locations
+        #     x_to_aucs = [[] for _ in range(num_groups)]
+        #     x_to_auc_ses = [[] for _ in range(num_groups)]
+        #     for experiment_name in group_to_aucs.keys():
+        #         if target_column in experiment_name:
+        #             for model_name, auc in group_to_aucs[experiment_name].items():
+        #                 x_to_aucs[model2idx[model_name]].append((auc, experiment_name))
 
 
-    #     fig, ax = plt.subplots(figsize=(num_groups*1.5, num_groups*1.5))
-    #     width = 1/(len(x_to_aucs[0])*1.2)
-    #     experiment2color = {experiment_name: f"C{i}" for i, experiment_name in enumerate(group_to_aucs.keys()) if target_column in experiment_name}
-    #     for i, aucs_and_experiments in enumerate(x_to_aucs):
-    #         for j, (auc, experiment_name) in enumerate(aucs_and_experiments):
-    #             x_loc = x[i] + width*j
-    #             plt.bar(x_loc, auc, width, label=experiment_name, color=experiment2color[experiment_name], alpha=0.8)
-    #             plt.text(x_loc, auc, f"{auc:.2f}", color="black", fontweight="bold", fontsize=6, ha="center", va="bottom")
+        #     fig, ax = plt.subplots(figsize=(num_groups*1.5, num_groups*1.5))
+        #     width = 1/(len(x_to_aucs[0])*1.2)
+        #     experiment2color = {experiment_name: f"C{i}" for i, experiment_name in enumerate(group_to_aucs.keys()) if target_column in experiment_name}
+        #     for i, aucs_and_experiments in enumerate(x_to_aucs):
+        #         for j, (auc, experiment_name) in enumerate(aucs_and_experiments):
+        #             x_loc = x[i] + width*j
+        #             plt.bar(x_loc, auc, width, label=experiment_name, color=experiment2color[experiment_name], alpha=0.8)
+        #             plt.text(x_loc, auc, f"{auc:.2f}", color="black", fontweight="bold", fontsize=6, ha="center", va="bottom")
 
-    #     plt.xticks(x+width*(len(aucs_and_experiments)-1)/2, idx2model.values(), rotation=45)
-    #     plt.ylabel("AUC (SE)")
-    #     plt.title(f"{target_column}")
-    #     # Write experiment names to legend
-    #     handles, labels = ax.get_legend_handles_labels()
-    #     by_label = dict(zip(labels, handles))
-    #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=12)
-    #     plt.grid(axis="y", alpha=0.5)
-    #     plt.show()
+        #     plt.xticks(x+width*(len(aucs_and_experiments)-1)/2, idx2model.values(), rotation=45)
+        #     plt.ylabel("AUC (SE)")
+        #     plt.title(f"{target_column}")
+        #     # Write experiment names to legend
+        #     handles, labels = ax.get_legend_handles_labels()
+        #     by_label = dict(zip(labels, handles))
+        #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=12)
+        #     plt.grid(axis="y", alpha=0.5)
+        #     plt.show()

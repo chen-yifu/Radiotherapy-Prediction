@@ -69,6 +69,7 @@ class Predictor:
         class_cols = set()
         model_names = set()
         print("The shape of training data is", X.shape)
+        train_shape = X.shape
         for i, (train_index, test_index) in enumerate(kf.split(X, y)):
             # if verbose:
             print(f"Fold {i+1}...", end=" ")
@@ -129,7 +130,7 @@ class Predictor:
             "prob_columns": sorted(list(prob_cols)),
             "class_columns": sorted(list(class_cols)),
             "model_names": sorted(list(model_names))
-        }
+        }, train_shape
         
                 
     def initialize_models(self, use_full_model: bool, verbose: bool, classification_task: bool, seed: int = 42) -> None:
@@ -143,19 +144,20 @@ class Predictor:
             N = 100
         if classification_task:
             models = {
-                "logistic_reg": (LogisticRegressionCV(cv=5, max_iter=N, random_state=seed+1), "coef_"),
-                "random_forest": (RandomForestClassifier(n_estimators=N, random_state=seed+2), "feature_importances_"),
-                "elastic_net": (LogisticRegressionCV(cv=5, l1_ratios=[round(0.2 * i, 2) for i in range(0,6)],penalty='elasticnet', solver='saga', max_iter=N, random_state=seed+3), "coef_"),
+                "logistic_reg": (LogisticRegressionCV(cv=5, max_iter=N, n_jobs=-1, random_state=seed+1), "coef_"),
+                "logistic_lasso": (LogisticRegressionCV(cv=5, max_iter=N, n_jobs=-1, penalty="l1", solver="liblinear", random_state=seed+7), "coef_"),
+                "random_forest": (RandomForestClassifier(n_estimators=N, n_jobs=-1, random_state=seed+2), "feature_importances_"),
+                "elastic_net": (LogisticRegressionCV(cv=5, l1_ratios=[round(0.2 * i, 2) for i in range(0,6)], penalty='elasticnet', solver='saga', n_jobs=-1, max_iter=N, random_state=seed+3), "coef_"),
                 # "elastic_net_calibrated": (
                 #     CalibratedClassifierCV(
                 #         LogisticRegressionCV(cv=5, l1_ratios=[round(0.2 * i, 2) for i in range(0,6)],penalty='elasticnet', solver='saga', max_iter=N, random_state=seed+3*2),
-                #         ensemble=True
+                #         ensemble=Tticrue
                 #     ), lambda x: x.calibrated_classifiers_[0].base_estimator.coef_[0]),
                 # "elastic_net": (SGDClassifier(loss="log_loss", penalty="elasticnet"), "coef_"),
-                "lasso": (SGDClassifier(loss="log_loss", penalty="l1"), "coef_"),
+                # "lasso": (SGDClassifier(loss="log_loss", penalty="l1"), "coef_"),
                 "svm": (SVC(kernel='linear', probability=True), "coef_"),
                 "gradient_boost": (GradientBoostingClassifier(n_estimators=N, random_state=seed+4), "feature_importances_"),
-                "xgboost": (XGBClassifier(n_estimators=N, random_state=seed+5), "feature_importances_"),
+                "xgboost": (XGBClassifier(n_estimators=N, n_jobs=-1, random_state=seed+5), "feature_importances_"),
                 "neural_net": (MLPClassifier(max_iter=N, random_state=seed+6), "coefs_"),
                 # "els_net_old": (LogisticRegression(C=0, penalty='elasticnet', l1_ratio=0.5, solver='saga', max_iter=N, random_state=seed), "coef_"),
                 # "ridge": (SGDClassifier(loss="log_loss", penalty="l2"), "coef_"),

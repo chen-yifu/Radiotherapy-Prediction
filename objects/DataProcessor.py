@@ -44,7 +44,7 @@ class DataProcessor:
         
         assert df_unimputed.columns.str.startswith("POS_").any() <= 1
         
-        imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose)
+        imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose, imputation_order="random")
         if target_column != None:
             X = df_unimputed.drop(target_column, axis=1)
         else:

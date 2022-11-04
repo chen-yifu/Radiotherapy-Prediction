@@ -7,15 +7,18 @@ class InclusionCriteria():
 
     def __init__(
         self, 
-        exclude_neoadjuvant: bool, 
-        exclude_pre_ln_positive: bool, 
-        require_sln_biopsy: bool, 
-        require_invasive: bool,
-        require_noninvasive: bool,
-        require_nomogram_prob: bool,
+        # exclude_neoadjuvant: bool, 
+        # require_sln_biopsy: bool, 
+        # require_invasive: bool,
+        # require_noninvasive: bool,
+        # require_nomogram_prob: bool,
+        meets_nomogram: bool,
         dropout_rate: float,
-        key: str=None,
-        take_complement: bool=False
+        invasiveness: str,
+        exclude_pre_ln_positive: bool = True, 
+        
+        # take_complement: bool,
+        # key: str=None
     ):
         """Initialize InclusionCriteria object.
 
@@ -28,22 +31,64 @@ class InclusionCriteria():
             require_nomogram_prob (bool): Whether to require nomogram probability.
             dropout_rate (float): Dropout rate of randomly removing cases who meet inclusion criteria.
             key (str, optional): Key to save eligibility criteria to. Defaults to None.
-            take_complement (bool, optional): Whether to take complement of the above criteria. Defaults to False.
+            take_complement (bool, optional): Whether to take complement of the Nomogram Inclusion criteria. Defaults to False.
         """
-        self.exclude_neoadjuvant = exclude_neoadjuvant
-        self.exclude_pre_ln_positive = exclude_pre_ln_positive
-        self.require_sln_biopsy = require_sln_biopsy
-        self.require_invasive = require_invasive
-        self.require_noninvasive = require_noninvasive
-        self.require_nomogram_prob = require_nomogram_prob
+        # def take_complement(x):
+        #     if x is None:
+        #         return False
+        #     else:
+        #         return not x
+            
+        # self.exclude_neoadjuvant = exclude_neoadjuvant if not take_complement else not exclude_neoadjuvant
+        self.exclude_pre_ln_positive = exclude_pre_ln_positive # if not take_complement else not exclude_pre_ln_positive
+        # self.require_sln_biopsy = require_sln_biopsy if not take_complement else not require_sln_biopsy
+        # self.require_invasive = require_invasive if not take_complement else not require_invasive
+        # self.require_noninvasive = require_noninvasive
+        # self.require_nomogram_prob = require_nomogram_prob
         self.dropout_rate = dropout_rate
-        self.key = key
-        self.take_complement = take_complement
+        self.meets_nomogram = meets_nomogram
+        self.invasiveness = invasiveness
+        # self.key = key
+        # self.take_complement = take_complement
         # Schema: {experiment_name: {case_id_1: bool}, ...}
         self.eligibility_dict = defaultdict(lambda: defaultdict(bool))
+        self.criteria_str = f"meets_nomogram={self.meets_nomogram}, invasiveness={self.invasiveness}, dropout_rate={self.dropout_rate}, exclude_pre_ln_positive={self.exclude_pre_ln_positive}"
+        # self.true_criteria = [attr for attr in self.__dict__]
+        # self.true_criteria_str = ", ".join(self.true_criteria)
         
-        config.InclusionCriteria = self
+    
+    # def __init__(
+    #     self, 
+    #     neoadjuvant: str, 
+    #     pre_ln_positive: str, 
+    #     sln_biopsy: str, 
+    #     hist_invasive: bool,
+    #     nomogram_prob: bool,
+    #     dropout_rate: float,
+    #     key: str=None,
+    #     take_complement: bool=False
+    # ):
+    #     """Initialize InclusionCriteria object.
+
+    #     Args:
+    #         dropout_rate (float): Dropout rate of randomly removing cases who meet inclusion criteria.
+    #         key (str, optional): Key to save eligibility criteria to. Defaults to None.
+    #         take_complement (bool, optional): Whether to take complement of the above criteria. Defaults to False.
+    #     """
         
+            
+    #     neoadjuvant = neoadjuvant
+    #     self.dropout_rate = dropout_rate
+    #     self.key = key
+    #     self.take_complement = take_complement
+    #     # Schema: {experiment_name: {case_id_1: bool}, ...}
+    #     self.eligibility_dict = defaultdict(lambda: defaultdict(bool))
+    #     self.true_criteria = [attr for attr in self.__dict__ if self.__dict__[attr]]
+    #     self.true_criteria_str = ", ".join(self.true_criteria)
+    
+        
+    def __str__(self) -> str:
+        return f"({self.criteria_str})"
     # def filter(self, df: pd.DataFrame, verbose=1) -> pd.DataFrame:
     #     """Given a dataframe, return a filtered dataframe based on the inclusion criteria.
 
@@ -119,20 +164,36 @@ class InclusionCriteria():
         Returns:
             bool: Whether the row meets the inclusion criteria.
         """
-        take_complement = self.take_complement
-        if self.exclude_neoadjuvant and row["PRE_systhe___no_systhe"] <= 0:
-            return False if not take_complement else True
+        needs_meet_nomogram = self.meets_nomogram
+        needs_invasiveness = self.invasiveness
+
+        if (needs_invasiveness == "invasive" and row["PRE_his_subtype_is_invasive_composite"] <= 0) or \
+            (needs_invasiveness == "non-invasive" and row["PRE_his_subtype_is_invasive_composite"] > 0):
+                return False
+            
+        record_meets_nomogram = True
+        if row["PRE_systhe___no_systhe"] <= 0 or row["PRE_susp_LN_prsnt_composite"] > 0 \
+            or row["POS_ax_surg___sln_biopsy"] <= 0 or row["PRE_his_subtype_is_invasive_composite"] <= 0:
+                record_meets_nomogram = False
+        if (needs_meet_nomogram == True and not record_meets_nomogram) or \
+            (needs_meet_nomogram == False and record_meets_nomogram):
+                return False
+
+        # return True
+        
+        # if self.exclude_neoadjuvant and row["PRE_systhe___no_systhe"] <= 0:
+        #     return #False #if not take_complement else True
         if self.exclude_pre_ln_positive and row["PRE_susp_LN_prsnt_composite"] > 0:
-            return False if not take_complement else True
-        if self.require_sln_biopsy and row["POS_ax_surg___sln_biopsy"] <= 0:
-            return False if not take_complement else True
-        if self.require_invasive and row["PRE_his_subtype_is_invasive_composite"] <= 0:
-            return False if not take_complement else True
-        if self.require_noninvasive and row["PRE_his_subtype_is_invasive_composite"] > 0:
-            return False if not take_complement else True
-        if self.require_nomogram_prob and str(row["PRE_sln_met_nomogram_prob"]) == "nan":
-            return False if not take_complement else True
-        return True if not take_complement else False
+            return False #if not take_complement else True
+        # if self.require_sln_biopsy and row["POS_ax_surg___sln_biopsy"] <= 0:
+        #     return False #if not take_complement else True
+        # if self.require_invasive and row["PRE_his_subtype_is_invasive_composite"] <= 0:
+        #     return False #if not take_complement else True
+        # if self.require_noninvasive and row["PRE_his_subtype_is_invasive_composite"] > 0:
+        #     return False #if not take_complement else True
+        # if self.require_nomogram_prob and str(row["PRE_sln_met_nomogram_prob"]) == "nan":
+        #     return False #if not take_complement else True
+        return True #if not take_complement else False
         
     
      

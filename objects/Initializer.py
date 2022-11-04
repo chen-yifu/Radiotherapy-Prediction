@@ -2,12 +2,20 @@ import config
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-
 class Initializer:
-    def __init__(self, metadata_path, raw_df_path=None, processed_df_path=None, DPI=150, models_to_show=[]):
+    def __init__(
+        self, 
+        metadata_path, 
+        raw_df_path, 
+        results_dir,
+        processed_df_path=None, 
+        DPI=150, 
+        models_to_show=[]
+        ):
         
         config.metadata_path = self.metadata_path = metadata_path
         config.raw_df_path = self.raw_df_path = raw_df_path
+        config.results_dir = self.results_dir = results_dir
         config.processed_df_path = self.processed_df_path = processed_df_path
         config.Initializer = self
         config.plot_dpi = DPI
