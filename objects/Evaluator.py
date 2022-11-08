@@ -49,7 +49,7 @@ class Evaluator:
 
         # Create cross-tab table
         if VarReader.is_dtype_categorical(dtype1) and VarReader.is_dtype_categorical(dtype2):
-            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=12)
+            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=24)
             # continue
             # If both are categorical, create a contingency table with percentages and margins
             df_cross_tab = pd.crosstab(df[col1], df[col2], margins=True)
@@ -76,8 +76,8 @@ class Evaluator:
             # Rotate the x-ticks and y-ticks
             # Plot the cross-tab table, which is a heatmap with no colors and black grid
             sns.heatmap(
-                df_cross_tab, annot=annotations, fmt="", cmap="Blues", annot_kws={"size": 10}, linewidths=1,
-                cbar=True, square=True, cbar_kws={"shrink": 0.5}, xticklabels=x_tick_labels, yticklabels=y_tick_labels)
+                df_cross_tab, annot=annotations, fmt="", cmap="Blues", annot_kws={"size": 30}, linewidths=1,
+                cbar=True, square=True, cbar_kws={"shrink": 0.5}, xticklabels=x_tick_labels, yticklabels=y_tick_labels, ax=ax)
             # # Add the options as x-axis labels and y-axis labels
             x_label = f"{label2}"
             y_label = f"{label1}"
@@ -100,7 +100,7 @@ class Evaluator:
                 cat_dtype, num_dtype = dtype2, dtype1
                 cat_label, num_label = label2, label1
             # The color of the boxplot is the category
-            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=12, loc="center")
+            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=24, loc="center")
             data = {}
             for cat in cat_options.keys():
                 num_data = df[df[cat_col] == cat][num_col].values
@@ -109,8 +109,8 @@ class Evaluator:
             # print("cat_options", cat_options, data.keys())
             ax.boxplot(data.values(), labels=[f"{k}, {v} (N={len(data[k])})" for k, v in cat_options.items()])
             for i, (cat, data_vals) in enumerate(data.items()):
-                x_pos = np.random.normal(i+1, 0.01, len(data_vals))
-                ax.scatter(x_pos, data_vals, alpha=0.05)
+                x_pos = np.random.normal(i+1, 0.02, len(data_vals))
+                ax.scatter(x_pos, data_vals, alpha=0.2)
             # Add gridlines
             ax.grid(which="major", axis="x", linestyle="-", linewidth=0.3, color="grey")
             ax.grid(which="major", axis="y", linestyle="-", linewidth=0.3, color="grey")
@@ -122,7 +122,7 @@ class Evaluator:
             plot_type = "boxplot"
         # Create scatter plot
         else:  # Both are numerical
-            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=12)
+            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=24)
             # If both are numerical, create a scatter plot with the two columns
             # The x-axis is the first column, the y-axis is the second column
             data = zip(df[col1], df[col2])
@@ -138,7 +138,7 @@ class Evaluator:
             # Write the regression equation as opaque text on the top-left corner of the plot
             slope, intercept = round(slope, 2), round(intercept, 2)
             text = f"Linear Regression: y = {slope} * x + {intercept}"
-            ax.text(0.05, 0.98, text, transform=ax.gca().transAxes, fontsize=10, va="top", alpha=0.7, color="orange")
+            ax.text(0.05, 0.98, text, transform=ax.gca().transAxes, fontsize=20, va="top", alpha=0.7, color="orange")
             # Add another regression line that is robust to outliers using HuberRegressor
             sklearn_x_data = np.array(x_data).reshape(-1, 1)
             sklearn_y_data = np.array(y_data)
@@ -146,10 +146,10 @@ class Evaluator:
             model = HuberRegressor(epsilon=huber_epsilon)
             model.fit(sklearn_x_data, sklearn_y_data)
             # Plot the fitted line
-            ax.plot(x_data, model.predict(sklearn_x_data), color="red", linewidth=1, alpha = 0.5)
+            ax.plot(x_data, model.predict(sklearn_x_data), color="red", linewidth=1, alpha = 0.5, fontsize=20)
             # Write the regression equation as opaque text on the top-left corner of the plot
             text = f"Huber Regression (robust to outliers, ε = {huber_epsilon}): y = {round(model.coef_[0], 2)} * x + {round(model.intercept_, 2)}"
-            ax.text(0.05, 0.93, text, transform=ax.gca().transAxes, fontsize=10, va="top", alpha=0.7, color="red")
+            ax.text(0.05, 0.93, text, transform=ax.gca().transAxes, fontsize=20, va="top", alpha=0.7, color="red")
             # Make grid background with gridlines
             ax.grid(which="major", axis="x", linestyle="-", linewidth=0.1, color="grey")
             ax.grid(which="major", axis="y", linestyle="-", linewidth=0.1, color="grey")
@@ -161,8 +161,9 @@ class Evaluator:
         # Add labels to the axes
         x_label = x_label[:80] + "..." if len(x_label) > 80 else x_label
         y_label = y_label[:80] + "..." if len(y_label) > 80 else y_label
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
+        ax.set_xlabel(x_label, fontsize=20)
+        ax.set_ylabel(y_label, fontsize=20)
+        ax.tick_params(axis="both", which="major", labelsize=15)
         
         
     def plot_auc_curve(self, df, pred_col, truth_col, ax):
@@ -179,9 +180,10 @@ class Evaluator:
         ax.grid(True)
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.05])
-        ax.set_xlabel('False Positive Rate')
-        ax.set_ylabel('True Positive Rate')
-        ax.set_title(f'Receiver Operating Characteristic Curve\n(AUC = {round(roc_auc, 4)})')
+        ax.set_xlabel('False Positive Rate', fontsize=20)
+        ax.set_ylabel('True Positive Rate', fontsize=20)
+        ax.tick_params(axis='both', which='major', labelsize=15)
+        ax.set_title(f'Receiver Operating Characteristic Curve\n(AUC = {round(roc_auc, 4)})', fontsize=24)
         return ax
     
     def find_optimal_auc_threshold(self, df, pred_col, truth_col):
@@ -197,12 +199,13 @@ class Evaluator:
         precision, recall, thresholds = precision_recall_curve(ytest, ypred_prob)
         average_precision = average_precision_score(ytest, ypred_prob)
         ax.plot(recall, precision, color='darkorange', lw=2)
-        ax.set_xlabel('Recall')
-        ax.set_ylabel('Precision')
+        ax.set_xlabel('Recall', fontsize=20)
+        ax.set_ylabel('Precision', fontsize=20)
         ax.grid(True)
         ax.set_ylim([0.0, 1.05])
         ax.set_xlim([0.0, 1.0])
-        ax.set_title(f'Precision-Recall Curve\n(Avg Precision = {round(average_precision, 4)})')
+        ax.tick_params(axis='both', which='major', labelsize=15)
+        ax.set_title(f'Precision-Recall Curve\n(Avg Precision = {round(average_precision, 4)})', fontsize=24)
         return ax
     
     def evaluate_predictions(
@@ -253,7 +256,7 @@ class Evaluator:
             accuracy = accuracy_score(ytest, ypred)
             precision, recall, thresholds = precision_recall_curve(ytest, ypred_prob)
             if show_results:
-                fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+                fig, ax = plt.subplots(2, 2, figsize=(30, 30))
                 self.plot_precision_recall_curve(df_prediction, pred_col_prob, target_column, ax=ax[0, 0])
                 self.plot_auc_curve(df_prediction, pred_col_prob, target_column, ax=ax[0, 1])
             precision = precision_score(ytest, ypred, zero_division=0)
@@ -282,6 +285,7 @@ class Evaluator:
             self.plot_cross_tab(df_prediction, pred_col_class, target_column, ax[1, 1], plot_missing=False)
             self.plot_cross_tab(df_prediction, pred_col_prob, target_column, ax[1, 0], plot_missing=False, threshold=threshold)
             fig.tight_layout()
+            fig.subplots_adjust(hspace=0.2)
             self.show_plot_and_save(title)
             print(f"Accuracy: {result['accuracy']}, ", f"F1: {result['f1']}, ", f"AUC: {result['auc']} ")
             print(f"Precision: {result['precision']}, ", f"Recall: {result['recall']}, ", f"Specificity: {result['specificity']}")
@@ -318,7 +322,7 @@ class Evaluator:
         print(f"Threshold for best {metric}: {best_threshold}")
         return best_threshold
 
-    def evaluate_nomogram(self, processed_df):
+    def evaluate_nomogram(self, processed_df, show_results):
         temp_df = processed_df.dropna(subset=["POS_metastasis", "PRE_sln_met_nomogram_prob"], axis=0)
         nomogram_eval = self.evaluate_predictions(
         temp_df,
@@ -326,7 +330,7 @@ class Evaluator:
         "PRE_sln_met_nomogram_class",
         target_column="POS_metastasis",
         title="PRE_sln_met_nomogram_prob",
-        show_results=True
+        show_results=show_results
         )
         return nomogram_eval
 
@@ -340,7 +344,6 @@ class Evaluator:
         # InclusionCriteria = config.InclusionCriteria
         eligibility_dict = inclusion_criteria.get_eligibility_dict(standardized=True)
         if eligibility_dict is not None:
-            # display(result_df)
             result_df = result_df[result_df["PRE_record_id"].map(eligibility_dict)]
             print(f"Inclusion criteria applied. {len(result_df)} records remain eligible.")
         
@@ -348,6 +351,8 @@ class Evaluator:
             show_results = show_results and model_name in config.models_to_show
             if show_results:
                 print("-"*50, model_name, "-"*50)
+            else:
+                print("will not show results for", model_name)
             VarReader.add_var(pred_col_prob, section="ML", dtype="numeric", label=f"Predicted Probability", options=dict(VarReader.read_var_attrib(target_column, has_missing=False)["options"]))
             VarReader.add_var(pred_col_class, section="ML", dtype="categorical", label=f"Predicted Class", options=dict(VarReader.read_var_attrib(target_column, has_missing=False)["options"]))
             eval_result = self.evaluate_predictions(
@@ -355,7 +360,7 @@ class Evaluator:
                 pred_col_prob,
                 pred_col_class,
                 target_column=target_column,
-                title=f"{pred_col_prob} (N={len(result_df)})" ,
+                title=f"{pred_col_prob} {experiment_name} (N={len(result_df)})" ,
                 show_results=show_results
             ) 
             model_eval_results[model_name] = eval_result
@@ -405,7 +410,7 @@ class Evaluator:
         plt.xlabel("Predicted Probability")
         plt.ylabel("True Probability")
         plt.title(f"{experiment_name}")
-        plt.legend(loc="lower right", prop={"size": 8})
+        plt.legend(loc="lower right", prop={"size": 24})
         plt.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
         if show_plot:
             # plt.show()
@@ -498,14 +503,31 @@ class Evaluator:
             return None
     
     
-    def show_plot_and_save(self, plot_name):
+    def show_plot_and_save(self, plot_name, legend=None):
         " Show the plot and save it to the output directory "
         results_dir = config.results_dir
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
-        plt.savefig(os.path.join(results_dir, plot_name))
+        # Always set the DPI to max
+        # get the subplots that have been made
+        # print("!!!"*100)
+        # print(plt.get_fignums())
+        # if len(plt.get_fignums()) > 1:
+        #     for fig_num in plt.get_fignums():
+        #         plt.figure(fig_num)
+        #         plt.show()
+        #         if legend is None:
+        #             plt.savefig(os.path.join(results_dir, f"{plot_name}_{fig_num}.png"), dpi=1200)
+        #         else:
+        #             plt.savefig(os.path.join(results_dir, f"{plot_name}_{fig_num}.png"), dpi=1200, bbox_extra_artists=(legend,), bbox_inches='tight')
+        #         print(f"Saved {plot_name}_{fig_num}.png")
+        # else:
+        if legend is None:
+            plt.savefig(os.path.join(results_dir, f"{plot_name}.png"), dpi=500)
+        else:
+            plt.savefig(os.path.join(results_dir, f"{plot_name}.png"), dpi=500, bbox_extra_artists=(legend,), bbox_inches='tight')
         plt.show()
-        # plt.close()
+        print(f"Saved {plot_name}.png")
         
         
         # def plot_experiment_groups_aucs(self, group_to_aucs, target_column):
@@ -549,6 +571,6 @@ class Evaluator:
         #     # Write experiment names to legend
         #     handles, labels = ax.get_legend_handles_labels()
         #     by_label = dict(zip(labels, handles))
-        #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=12)
+        #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=24)
         #     plt.grid(axis="y", alpha=0.5)
         #     plt.show()

@@ -15,8 +15,8 @@ class InclusionCriteria():
         meets_nomogram: bool,
         dropout_rate: float,
         invasiveness: str,
-        exclude_pre_ln_positive: bool = True, 
-        
+        exclude_pre_ln_positive: bool, 
+        exclude_neo_rt: bool,
         # take_complement: bool,
         # key: str=None
     ):
@@ -41,6 +41,7 @@ class InclusionCriteria():
             
         # self.exclude_neoadjuvant = exclude_neoadjuvant if not take_complement else not exclude_neoadjuvant
         self.exclude_pre_ln_positive = exclude_pre_ln_positive # if not take_complement else not exclude_pre_ln_positive
+        self.exclude_neo_rt = exclude_neo_rt
         # self.require_sln_biopsy = require_sln_biopsy if not take_complement else not require_sln_biopsy
         # self.require_invasive = require_invasive if not take_complement else not require_invasive
         # self.require_noninvasive = require_noninvasive
@@ -52,7 +53,11 @@ class InclusionCriteria():
         # self.take_complement = take_complement
         # Schema: {experiment_name: {case_id_1: bool}, ...}
         self.eligibility_dict = defaultdict(lambda: defaultdict(bool))
-        self.criteria_str = f"meets_nomogram={self.meets_nomogram}, invasiveness={self.invasiveness}, dropout_rate={self.dropout_rate}, exclude_pre_ln_positive={self.exclude_pre_ln_positive}"
+        # self.criteria_str = f"meets_nomogram={self.meets_nomogram}, invasiveness={self.invasiveness}{'dropout_rate=' + str(self.dropout_rate) if self.dropout_rate else ''}, exclude_pre_ln_positive={self.exclude_pre_ln_positive}"
+        self.criteria_str = ""
+        attrs = [self.meets_nomogram, self.invasiveness, self.exclude_pre_ln_positive, self.exclude_neo_rt, self.dropout_rate]
+        attr_names = ["meets_nomogram", "invasiveness", "exclude_pre_ln_positive", "exclude_neo_rt", "dropout_rate"]
+        self.criteria_str = ','.join([f"{attr_names[i]}={attr}" for i, attr in enumerate(attrs) if attr])
         # self.true_criteria = [attr for attr in self.__dict__]
         # self.true_criteria_str = ", ".join(self.true_criteria)
         
@@ -185,6 +190,8 @@ class InclusionCriteria():
         #     return #False #if not take_complement else True
         if self.exclude_pre_ln_positive and row["PRE_susp_LN_prsnt_composite"] > 0:
             return False #if not take_complement else True
+        if self.exclude_neo_rt and row["PRE_systhe___radiation"] > 0:
+            return False
         # if self.require_sln_biopsy and row["POS_ax_surg___sln_biopsy"] <= 0:
         #     return False #if not take_complement else True
         # if self.require_invasive and row["PRE_his_subtype_is_invasive_composite"] <= 0:
