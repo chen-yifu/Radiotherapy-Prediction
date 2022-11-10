@@ -177,8 +177,12 @@ class DataProcessor:
         return Data.get_df(df_name)
     
     
-    # def remove_correlated_features(
-    #     self,
-    #     df_orig: pd.DataFrame,
-    #     ...
-    # )
+    def add_noise_cols(self, df, num_noise_cols=10, noise_col_prefix="PRE_noise_"):
+        df = df.copy()
+        for i in range(num_noise_cols):
+            df[noise_col_prefix + str(i)] = np.random.normal(0, 1, df.shape[0])
+        return df
+    
+    def drop_pos_int_columns(self, df, target_column):
+        df = df.drop(columns=[x for x in df.columns if ("POS_" in x or "INT_" in x) and x != target_column])
+        return df

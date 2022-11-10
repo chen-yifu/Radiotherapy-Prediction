@@ -28,6 +28,8 @@ from scipy.stats import chi2_contingency
 from scipy.stats import ttest_ind
 from scipy.stats import pearsonr
 from scipy.stats import ttest_1samp
+from datetime import datetime
+
         
 pd.options.mode.chained_assignment = None
 
@@ -51,7 +53,7 @@ class Evaluator:
         if VarReader.is_dtype_categorical(dtype1) and VarReader.is_dtype_categorical(dtype2):
             ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=24)
             # continue
-            # If both are categorical, create a contingency table with percentages and margins
+            # If both are categorical, create a contingency table (confusion matrix) with percentages and margins
             df_cross_tab = pd.crosstab(df[col1], df[col2], margins=True)
             # Rename "All" with "Total" in the df_cross_tab columns and indices
             df_cross_tab.columns = df_cross_tab.columns.tolist()[:-1] + ["Total"]
@@ -77,7 +79,11 @@ class Evaluator:
             # Plot the cross-tab table, which is a heatmap with no colors and black grid
             sns.heatmap(
                 df_cross_tab, annot=annotations, fmt="", cmap="Blues", annot_kws={"size": 30}, linewidths=1,
-                cbar=True, square=True, cbar_kws={"shrink": 0.5}, xticklabels=x_tick_labels, yticklabels=y_tick_labels, ax=ax)
+                cbar=True, square=True, cbar_kws={"shrink": 0.5}, xticklabels=x_tick_labels, 
+                yticklabels=y_tick_labels, ax=ax
+                )
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=20)
             # # Add the options as x-axis labels and y-axis labels
             x_label = f"{label2}"
             y_label = f"{label1}"
@@ -208,6 +214,47 @@ class Evaluator:
         ax.set_title(f'Precision-Recall Curve\n(Avg Precision = {round(average_precision, 4)})', fontsize=24)
         return ax
     
+    def plot_calibration_curve(
+        self, 
+        y_test,
+        y_pred_prob,
+        plot_title: str,
+        ax_calibration,
+        ax_histogram,
+        show_plot: bool = False, 
+        verbose: bool = False
+        ):
+        # Print the size of y_test and y_pred_prob
+        if verbose:
+            print(f"y_test size: {y_test.shape}")
+            print(f"y_pred_prob size: {y_pred_prob.shape}")
+        # Calculate the RMSE between the predicted probabilities and actual label
+        rmse = round(np.sqrt(mean_squared_error(y_test, y_pred_prob)), 3)
+        # Calculate the log-loss
+        loss = round(log_loss(y_test, y_pred_prob), 3)
+        target_true_binned, pred_probs_binned = calibration_curve(y_test, y_pred_prob, n_bins=10)
+        ax_calibration.plot(pred_probs_binned, target_true_binned, label=f"{rmse} RMSE, {loss} Log-Loss", alpha=0.5, marker="o", linestyle="None", markersize=10)
+        fit_line = np.polyfit(pred_probs_binned, target_true_binned, 1)
+        ax_calibration.plot(pred_probs_binned, fit_line[0] * pred_probs_binned + fit_line[1], linestyle="-", alpha=0.7)
+        ax_calibration.set_xlabel("Predicted Probability", fontsize=20)
+        ax_calibration.set_ylabel("True Probability", fontsize=20)
+        ax_calibration.set_title("Calibration Curve", fontsize=24)
+        ax_calibration.legend(loc="lower right", prop={"size": 24})
+        ax_calibration.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
+        ax_calibration.tick_params(axis="both", which="major", labelsize=15)
+        if show_plot:
+            self.show_plot_and_save(f"{plot_title}_calibration_curve")
+        
+        # Plot the histogram for y_pred on ax_histogram
+        ax_histogram.hist(y_pred_prob, bins=100, alpha=0.7, label="Predicted Probabilities")
+        ax_histogram.set_xlabel("Distribution of Predicted Probabilities", fontsize=20)
+        ax_histogram.set_ylabel("Count", fontsize=20)
+        ax_histogram.set_title("Histogram of Predicted Probabilities", fontsize=24)
+        ax_histogram.legend(loc="upper right", prop={"size": 24})
+        ax_histogram.tick_params(axis="both", which="major", labelsize=15)
+        if show_plot:
+            self.show_plot_and_save(f"{plot_title}_predicted_probability_histogram")
+        
     def evaluate_predictions(
         self, 
         df: pd.DataFrame, 
@@ -256,9 +303,10 @@ class Evaluator:
             accuracy = accuracy_score(ytest, ypred)
             precision, recall, thresholds = precision_recall_curve(ytest, ypred_prob)
             if show_results:
-                fig, ax = plt.subplots(2, 2, figsize=(30, 30))
+                fig, ax = plt.subplots(2, 3, figsize=(45, 30))
                 self.plot_precision_recall_curve(df_prediction, pred_col_prob, target_column, ax=ax[0, 0])
                 self.plot_auc_curve(df_prediction, pred_col_prob, target_column, ax=ax[0, 1])
+                self.plot_calibration_curve(ytest, ypred_prob, title, ax_calibration=ax[0, 2], ax_histogram=ax[1, 2], verbose=True)
             precision = precision_score(ytest, ypred, zero_division=0)
             f1 = f1_score(ytest, ypred)
             recall = recall_score(ytest, ypred)
@@ -360,7 +408,7 @@ class Evaluator:
                 pred_col_prob,
                 pred_col_class,
                 target_column=target_column,
-                title=f"{pred_col_prob} {experiment_name} (N={len(result_df)})" ,
+                title=f"{model_name} {experiment_name} (N={len(result_df)})" ,
                 show_results=show_results
             ) 
             model_eval_results[model_name] = eval_result
@@ -370,63 +418,53 @@ class Evaluator:
         return model_eval_results, eval_num_records
 
     
-    def plot_calibration_curve(
-        self, 
-        results, 
-        target_df, 
-        valid_idx, 
-        target_column, 
-        pred_column, 
-        experiment_name, 
-        model_name, 
-        show_plot=True, 
-        verbose=False
-        ):
+    # def plot_calibration_curve(
+    #     self, 
+    #     result_df, 
+    #     target_df, 
+    #     valid_idx, 
+    #     target_column, 
+    #     pred_column, 
+    #     experiment_name, 
+    #     model_name, 
+    #     show_plot=True, 
+    #     verbose=False
+    #     ):
 
-        target_df = target_df.loc[valid_idx]
-        target_true = target_df[target_column]
-        # ml_model_pred = results[experiment_name]["result_df"]
-        # ml_model_pred = ml_model_pred.loc[valid_idx]["PRE_POS_metastasis_elastic_net_prob"]
-        pred_probs = results[experiment_name]["result_df"].loc[valid_idx][pred_column]
-        print(f"The shape of the target_df is {target_df.shape}", f"The shape of the prediction is {pred_probs.shape}")
+    #     # target_df = target_df.loc[valid_idx]
+    #     # target_true = target_df[target_column]
+    #     # pred_probs = results[experiment_name]["result_df"].loc[valid_idx][pred_column]
+    #     # print(f"The shape of the target_df is {target_df.shape}", f"The shape of the prediction is {pred_probs.shape}")
+    #     ytest
 
-        # for pred_probs, color, label in zip([ml_model_pred, nomogram_pred], ["orange", "blue"], [f"elastic_net {experiment_name}", "Nomogram"]):
+    #     # Calculate the RMSE between the predicted probabilities and actual label
+    #     rmse = round(np.sqrt(mean_squared_error(target_true, pred_probs)), 3)
+    #     # Calculate the log-loss
+    #     loss = round(log_loss(target_true, pred_probs), 3)
+    #     target_true_binned, pred_probs_binned = calibration_curve(target_true, pred_probs, n_bins=10)
+    #     plt.plot(pred_probs_binned, target_true_binned, label=f"{model_name} ({rmse} RMSE, {loss} Log-Loss)", alpha=0.5, marker="o", linestyle="None")
+    #     fit_line = np.polyfit(pred_probs_binned, target_true_binned, 1)
+    #     plt.plot(pred_probs_binned, fit_line[0] * pred_probs_binned + fit_line[1], linestyle="-", alpha=0.7)
+
+    #     pred_auc = round(roc_auc_score(target_true, pred_probs), 4)
+    #     nomogram_accuracy = round(accuracy_score(target_true, pred_probs > 0.5), 4)
+
+    #     if verbose:
+    #         print(f"The AUC for {model_name} is {pred_auc}")
+    #         print(f"The accuracy for {model_name} is {nomogram_accuracy}")
+    #     plt.xlabel("Predicted Probability")
+    #     plt.ylabel("True Probability")
+    #     plt.title(f"{experiment_name}")
+    #     plt.legend(loc="lower right", prop={"size": 24})
+    #     plt.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
+    #     if show_plot:
+    #         self.show_plot_and_save(f"{experiment_name}_{model_name}_calibration_curve")
         
-        # Calculate the RMSE between the predicted probabilities and actual label
-        rmse = round(np.sqrt(mean_squared_error(target_true, pred_probs)), 3)
-        # Calculate the log-loss
-        loss = round(log_loss(target_true, pred_probs), 3)
-        target_true_binned, pred_probs_binned = calibration_curve(target_true, pred_probs, n_bins=10)
-        plt.plot(pred_probs_binned, target_true_binned, label=f"{model_name} ({rmse} RMSE, {loss} Log-Loss)", alpha=0.5, marker="o", linestyle="None")
-        fit_line = np.polyfit(pred_probs_binned, target_true_binned, 1)
-        plt.plot(pred_probs_binned, fit_line[0] * pred_probs_binned + fit_line[1], linestyle="-", alpha=0.7)
-
-        pred_auc = round(roc_auc_score(target_true, pred_probs), 4)
-        nomogram_accuracy = round(accuracy_score(target_true, pred_probs > 0.5), 4)
-
-        if verbose:
-            print(f"The AUC for {model_name} is {pred_auc}")
-            print(f"The accuracy for {model_name} is {nomogram_accuracy}")
-        plt.xlabel("Predicted Probability")
-        plt.ylabel("True Probability")
-        plt.title(f"{experiment_name}")
-        plt.legend(loc="lower right", prop={"size": 24})
-        plt.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
-        if show_plot:
-            # plt.show()
-            self.show_plot_and_save(f"{experiment_name}_{model_name}_calibration_curve")
+    #     pred_probs.hist(bins=100, label=f"{model_name}", alpha=0.5)
+    #     plt.legend()
+    #     if show_plot:
+    #         self.show_plot_and_save(f"{experiment_name}_{model_name}_histogram")
         
-        pred_probs.hist(bins=100, label=f"{model_name}", alpha=0.5)
-        plt.legend()
-        if show_plot:
-            # plt.show()
-            self.show_plot_and_save(f"{experiment_name}_{model_name}_histogram")
-            # plt.show()
-        
-        # return {
-        #     "elastic_net_auc": elastic_net_auc,
-             
-        # }
     
     
     def get_significance_level(self, p_value):
@@ -487,12 +525,8 @@ class Evaluator:
         if len(col2pval) > 0:
             # Delete entries with NaN p-values
             col2pval = {k: v for k, v in col2pval.items() if not np.isnan(v)}
-            # col2pval = {(str(k[0]), str(k[1]), str(k[2])): v for k, v in col2pval.items() if not np.isnan(v)}
             # Sort and print the p-values in ascending order
             sorted_pvals = sorted(col2pval.items(), key=lambda x: x[1])
-            # max_col1 = max([len(x[0][0]) for x in sorted_pvals])
-            # max_col2 = max([len(x[0][1]) for x in sorted_pvals])
-            # max_test_name = max([len(x[0][2]) for x in sorted_pvals]
             max_len = max([len(x[0]) for x in sorted_pvals])
             for col1, p in sorted_pvals:
                 significance_level = self.get_significance_level(p)
@@ -508,69 +542,14 @@ class Evaluator:
         results_dir = config.results_dir
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
-        # Always set the DPI to max
-        # get the subplots that have been made
-        # print("!!!"*100)
-        # print(plt.get_fignums())
-        # if len(plt.get_fignums()) > 1:
-        #     for fig_num in plt.get_fignums():
-        #         plt.figure(fig_num)
-        #         plt.show()
-        #         if legend is None:
-        #             plt.savefig(os.path.join(results_dir, f"{plot_name}_{fig_num}.png"), dpi=1200)
-        #         else:
-        #             plt.savefig(os.path.join(results_dir, f"{plot_name}_{fig_num}.png"), dpi=1200, bbox_extra_artists=(legend,), bbox_inches='tight')
-        #         print(f"Saved {plot_name}_{fig_num}.png")
-        # else:
+        plot_path = os.path.join(results_dir, f"{plot_name}.png")
+        if os.path.exists(plot_path):
+            plot_path = plot_path.replace(".png", f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
         if legend is None:
-            plt.savefig(os.path.join(results_dir, f"{plot_name}.png"), dpi=500)
+            plt.savefig(plot_path, dpi=500)
         else:
-            plt.savefig(os.path.join(results_dir, f"{plot_name}.png"), dpi=500, bbox_extra_artists=(legend,), bbox_inches='tight')
+            plt.savefig(plot_path, dpi=500, bbox_extra_artists=(legend,), bbox_inches='tight')
         plt.show()
         print(f"Saved {plot_name}.png")
-        
-        
-        # def plot_experiment_groups_aucs(self, group_to_aucs, target_column):
-        #     """Given a dictionary with schema: {group_name: [aucs], ...}, plot the mean and SE of AUC for each group
-
-        #     Args:
-        #         group_to_mean_auc (_type_): _description_
-        #         target_column (_type_): _description_
-        #     """
-        #     num_groups = len(group_to_aucs[experiment_name].keys())
-        #     model2idx = {model_name: i for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
-        #     idx2model = {i: model_name for i, model_name in enumerate(group_to_aucs[experiment_name].keys())}
-        #     for col_i, (target_column, experiment_name, subset_cols, _) in enumerate(Experiment):
-        #         auc_mean, auc_se = [], []
-        #         for model_name, aucs in model_to_aucs[experiment_name].items():
-        #             auc_mean.append(np.mean(aucs))
-        #             auc_se.append(np.std(aucs) / np.sqrt(num_repeat))
-        #             group_to_aucs[experiment_name][model_name] = np.mean(aucs)
-
-        #     x = np.arange(num_groups)  # the label locations
-        #     x_to_aucs = [[] for _ in range(num_groups)]
-        #     x_to_auc_ses = [[] for _ in range(num_groups)]
-        #     for experiment_name in group_to_aucs.keys():
-        #         if target_column in experiment_name:
-        #             for model_name, auc in group_to_aucs[experiment_name].items():
-        #                 x_to_aucs[model2idx[model_name]].append((auc, experiment_name))
 
 
-        #     fig, ax = plt.subplots(figsize=(num_groups*1.5, num_groups*1.5))
-        #     width = 1/(len(x_to_aucs[0])*1.2)
-        #     experiment2color = {experiment_name: f"C{i}" for i, experiment_name in enumerate(group_to_aucs.keys()) if target_column in experiment_name}
-        #     for i, aucs_and_experiments in enumerate(x_to_aucs):
-        #         for j, (auc, experiment_name) in enumerate(aucs_and_experiments):
-        #             x_loc = x[i] + width*j
-        #             plt.bar(x_loc, auc, width, label=experiment_name, color=experiment2color[experiment_name], alpha=0.8)
-        #             plt.text(x_loc, auc, f"{auc:.2f}", color="black", fontweight="bold", fontsize=6, ha="center", va="bottom")
-
-        #     plt.xticks(x+width*(len(aucs_and_experiments)-1)/2, idx2model.values(), rotation=45)
-        #     plt.ylabel("AUC (SE)")
-        #     plt.title(f"{target_column}")
-        #     # Write experiment names to legend
-        #     handles, labels = ax.get_legend_handles_labels()
-        #     by_label = dict(zip(labels, handles))
-        #     plt.legend(by_label.values(), by_label.keys(), loc="lower right", bbox_to_anchor=(1.0, 0.0), ncol=1, fontsize=24)
-        #     plt.grid(axis="y", alpha=0.5)
-        #     plt.show()
