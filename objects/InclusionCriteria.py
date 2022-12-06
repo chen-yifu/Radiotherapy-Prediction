@@ -52,7 +52,7 @@ class InclusionCriteria():
         # self.key = key
         # self.take_complement = take_complement
         # Schema: {experiment_name: {case_id_1: bool}, ...}
-        self.eligibility_dict = defaultdict(lambda: defaultdict(bool))
+        self.eligibility_dict = defaultdict(lambda: defaultdict(lambda: True))
         # self.criteria_str = f"meets_nomogram={self.meets_nomogram}, invasiveness={self.invasiveness}{'dropout_rate=' + str(self.dropout_rate) if self.dropout_rate else ''}, exclude_pre_ln_positive={self.exclude_pre_ln_positive}"
         self.criteria_str = ""
         attrs = [self.meets_nomogram, self.invasiveness, self.exclude_pre_ln_positive, self.exclude_neo_rt, self.dropout_rate]
@@ -228,13 +228,14 @@ class InclusionCriteria():
             
         for i, row in df.iterrows():
             if self.dropout_rate > 0:
-                to_include = np.random.choice([True, False], p=[1-self.dropout_rate, self.dropout_rate])
+                to_drop = np.random.choice([False, True], p=[1-self.dropout_rate, self.dropout_rate])
             else:
-                to_include = True
-            eligibility_dict[key][row["PRE_record_id"]] = self.check_row_meets_inclusion(row) and to_include
+                to_drop = False
+            eligibility_dict[key][row["PRE_record_id"]] = self.check_row_meets_inclusion(row) and not to_drop
         
         if verbose:
-            print(f"There are {sum(eligibility_dict[key].values())} cases that meet the inclusion criteria.")
+            print(f"Saved {sum(eligibility_dict[key].values())} cases that meet the inclusion criteria.")
+
         return eligibility_dict[key].copy()
     
     def filter_records_by_eligibility(self, df: pd.DataFrame, key: str, verbose=1) -> pd.DataFrame:
@@ -251,7 +252,8 @@ class InclusionCriteria():
         If DataFrame was standardized, hence values are not necessarily 0 or 1.
         Since original values are 0 or 1, they will be negative and positive, respectively.
         """
-        orig_shape = df.shape
+        orig_df = df.copy()
+        orig_shape = orig_df.shape
         eligibility_dict = self.eligibility_dict
         
         if verbose:
@@ -261,8 +263,14 @@ class InclusionCriteria():
             raise ValueError(f"Key name {key} not found in eligibility_dict. Please run save_records_eligibility first.")
         
         df = df[df["PRE_record_id"].map(eligibility_dict[key])]
-        if verbose > 0:
-            print(f"Filtered DataFrame from shape {orig_shape} to {df.shape}")
+        # if verbose > 0:
+        #     print(orig_df.head())
+        #     for i, row in orig_df.iterrows():
+        #         if row["PRE_record_id"] not in eligibility_dict[key]:
+        #             print(f"Record {row['PRE_record_id']} not in eligibility_dict.")
+        #         if i > 10:
+        #             break
+        #     print(f"Filtered DataFrame from shape {orig_shape} to {df.shape}")
             
         return df
     

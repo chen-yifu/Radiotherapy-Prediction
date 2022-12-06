@@ -8,19 +8,26 @@ class Initializer:
         metadata_path, 
         raw_df_path, 
         results_dir,
-        processed_df_path=None, 
+        use_KNN_imputer,
+        use_yeo_johnson,
+        processed_trainval_df_path=None,
+        processed_test_df_path=None,
         DPI=150, 
-        models_to_show=[]
+        models_to_show=[],
+        n_bootstraps=10000
         ):
         
         config.metadata_path = self.metadata_path = metadata_path
         config.raw_df_path = self.raw_df_path = raw_df_path
         config.results_dir = self.results_dir = results_dir
-        config.processed_df_path = self.processed_df_path = processed_df_path
+        config.processed_trainval_df_path = self.processed_trainval_df_path = processed_trainval_df_path
+        config.processed_test_df_path = self.processed_test_df_path = processed_test_df_path
         config.Initializer = self
         config.plot_dpi = DPI
         config.models_to_show = models_to_show
-        
+        config.use_KNN_imputer = use_KNN_imputer
+        config.use_yeo_johnson = use_yeo_johnson
+        config.n_bootstraps = n_bootstraps
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.expand_frame_repr', False)

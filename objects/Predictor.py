@@ -9,6 +9,8 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import StratifiedKFold
 from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import GridSearchCV
+
 # from sklearn.linear_model import Lasso
 # from sklearn.linear_model import ElasticNet
 from sklearn.calibration import CalibratedClassifierCV
@@ -17,6 +19,7 @@ from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 import pandas as pd
 import config
+from utils.printers import print_with_color, bcolors
 
 class Predictor:
     def __init__(self):
@@ -34,6 +37,8 @@ class Predictor:
         use_full_model=True,
         classification_task=True,
         seed=42,
+        init_models=None,
+        fit_models=True,
         ) -> None:
         """
         Given a DataFrame ready to be trained, train ML models.
@@ -54,59 +59,124 @@ class Predictor:
         # record_ids = X["PRE_record_id"]
         # X = X.drop("PRE_record_id", axis=1)
         if verbose:
-            print(f"Predicting target column {target_column} with {k_fold}-fold cross-validation.")
-            print(f"Dropped {len(df_ready) - len(X)} rows with NaN in {target_column}; There are {len(X)} rows left.")
-        kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=seed)
+            print_with_color(f"Predicting target column {target_column} with {k_fold}-fold cross-validation.", color=bcolors.OKBLUE)
+            print_with_color(f"Dropped {len(df_ready) - len(X)} rows with NaN in {target_column}; There are {len(X)} rows left.", color=bcolors.OKBLUE)
         assert len(X) == len(y)
         assert len(X) > 0
         assert len(y) > 0
         assert y.isna().sum() == 0
         assert X.isna().sum().sum() == 0
+        
         predictions = pd.DataFrame(index=df_ready.index)
         predictions["fold"] = None
         feature_scores = defaultdict(list)
         prob_cols = set()
         class_cols = set()
         model_names = set()
-        print("The shape of training data is", X.shape)
+        if fit_models:
+            print_with_color(f"The shape of TRAINING data is {X.shape}", color=bcolors.OKBLUE)
+        else:
+            print_with_color(f"The shape of TESTING data is {X.shape}", color=bcolors.OKBLUE)
         train_shape = X.shape
-        for i, (train_index, test_index) in enumerate(kf.split(X, y)):
-            # if verbose:
-            print(f"Fold {i+1}...", end=" ")
-            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-            X_train, X_test = X_train.drop("PRE_record_id", axis=1), X_test.drop("PRE_record_id", axis=1)
-            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-            # Standardize X_train and X_test
-            models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
+        if k_fold != -1:
+            kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=seed)
+            for i, (train_index, test_index) in enumerate(kf.split(X, y)):
+                # if verbose:
+                print_with_color(f"\n\nFold {i+1}...", bcolors.OKGREEN)
+                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                X_train, X_test = X_train.drop("PRE_record_id", axis=1), X_test.drop("PRE_record_id", axis=1)
+                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+                # Standardize X_train and X_test
+                if init_models is None:
+                    models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
+                else:
+                    models = init_models
+                    print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
+                for name, (model, feature_score__key) in models.items():
+                    print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
+                    if fit_models:
+                        model.fit(X_train, y_train)
+                        print_with_color(f"Trained {name} on 'other folds' to predict fold {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                    else:
+                        print_with_color(f"Inferencing pre-trained {name} on 'fold' {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                    
+                    if fit_models:
+                        print(f"Train index: {train_index[:70]}...")
+                    print(f"Validation index: {test_index[:10]}...")
+                    y_prob = model.predict_proba(X_test)[:, 1]
+                    y_class = model.predict(X_test)
+                    predictions_prob_col = f"PRE_{target_column}_{name}_prob"
+                    predictions_class_col = f"PRE_{target_column}_{name}_class"
+                    prob_cols.add(predictions_prob_col)
+                    class_cols.add(predictions_class_col)
+                    model_names.add(name)
+                    predictions.loc[X.index[test_index], predictions_prob_col] = y_prob
+                    predictions.loc[X.index[test_index], predictions_class_col] = y_class
+                    predictions.loc[X.index[test_index], "fold"] = i
+                    # Save the feature scores
+                    if feature_score__key == 'coef_':
+                        for feature, score in zip(X_train.columns, model.coef_[0]):
+                            feature_scores[name].append((feature, score))
+                    elif feature_score__key == 'feature_importances_':
+                        for feature, score in zip(X_train.columns, model.feature_importances_):
+                            feature_scores[name].append((feature, score))
+                    elif feature_score__key == 'coefs_':
+                        # Assumes only 1 hidden layer
+                        for feature, score in zip(X_train.columns, model.coefs_[0]):
+                            feature_scores[name].append((feature, score[0]))
+                    elif feature_score__key == "best_estimator_feature_importances":
+                        for feature, score in zip(X_train.columns, model.best_estimator_.feature_importances_):
+                            feature_scores[name].append((feature, score))
+                    elif feature_score__key == "best_estimator_coef_":
+                        for feature, score in zip(X_train.columns, model.best_estimator_.coef_[0]):
+                            feature_scores[name].append((feature, score))
+                    elif callable(feature_score__key):
+                        for feature, score in zip(X_train.columns, feature_score__key(model)):
+                            feature_scores[name].append((feature, score))
+        else:
+            X = X.drop("PRE_record_id", axis=1)
+            if init_models is None:
+                models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
+            else:
+                models = init_models
+                print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
             for name, (model, feature_score__key) in models.items():
-                print(f"Training {name}...", end=" ")
-                model.fit(X_train, y_train)
-                y_prob = model.predict_proba(X_test)[:, 1]
-                y_class = model.predict(X_test)
-                predictions_prob_col = f"PRE_{target_column}_{name}_prob"
-                predictions_class_col = f"PRE_{target_column}_{name}_class"
-                prob_cols.add(predictions_prob_col)
-                class_cols.add(predictions_class_col)
-                model_names.add(name)
-                predictions.loc[X.index[test_index], predictions_prob_col] = y_prob
-                predictions.loc[X.index[test_index], predictions_class_col] = y_class
-                predictions.loc[X.index[test_index], "fold"] = i
+                print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
+                if fit_models:
+                    model.fit(X, y)
+                    print_with_color(f"Trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                else:
+                    print_with_color(f"Inferencing pre-trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                if not fit_models:
+                    # Model is already trained, so predict
+                    y_prob = model.predict_proba(X)[:, 1]
+                    y_class = model.predict(X)
+                    predictions_prob_col = f"PRE_{target_column}_{name}_prob"
+                    predictions_class_col = f"PRE_{target_column}_{name}_class"
+                    prob_cols.add(predictions_prob_col)
+                    class_cols.add(predictions_class_col)
+                    model_names.add(name)
+                    predictions[X.index, predictions_prob_col] = y_prob
+                    predictions[X.index, predictions_class_col] = y_class
+                    print_with_color(f"Predicted {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                else:
+                    # Model is not trained, and we just trained it on all data, so no predictions to make
+                    print(f"Trained {name} on all data, so no predictions to make.{bcolors.ENDC}")
+                    pass
                 # Save the feature scores
                 if feature_score__key == 'coef_':
-                    for feature, score in zip(X_test.columns, model.coef_[0]):
+                    for feature, score in zip(X.columns, model.coef_[0]):
                         feature_scores[name].append((feature, score))
                 elif feature_score__key == 'feature_importances_':
-                    for feature, score in zip(X_test.columns, model.feature_importances_):
+                    for feature, score in zip(X.columns, model.feature_importances_):
                         feature_scores[name].append((feature, score))
                 elif feature_score__key == 'coefs_':
                     # Assumes only 1 hidden layer
-                    for feature, score in zip(X_test.columns, model.coefs_[0]):
+                    for feature, score in zip(X.columns, model.coefs_[0]):
                         feature_scores[name].append((feature, score[0]))
                 elif callable(feature_score__key):
-                    for feature, score in zip(X_test.columns, feature_score__key(model)):
+                    for feature, score in zip(X.columns, feature_score__key(model)):
                         feature_scores[name].append((feature, score))
-                else:
-                    raise ValueError(f"Unknown feature score key: {feature_score__key}")
         if verbose:
             print("\n")
 
@@ -140,32 +210,29 @@ class Predictor:
         """
         if use_full_model:
             N = 1000
+            if verbose:
+                print("Using full model.")
         else:
             N = 100
+            if verbose:
+                print("Using small model.")
         if classification_task:
-            models = {
-                "logistic_reg": (LogisticRegressionCV(cv=5, max_iter=N, n_jobs=-1, solver="saga", random_state=seed+1), "coef_"),
-                "logistic_lasso": (LogisticRegressionCV(cv=5, max_iter=N, n_jobs=-1, penalty="l1", solver="saga", random_state=seed+7), "coef_"),
-                "random_forest": (RandomForestClassifier(n_estimators=N, n_jobs=-1, random_state=seed+2), "feature_importances_"),
-                "elastic_net": (LogisticRegressionCV(cv=5, l1_ratios=[round(0.25 * i, 2) for i in range(1,4)], penalty='elasticnet', solver='saga', n_jobs=-1, max_iter=N, random_state=seed+3), "coef_"),
-                # "elastic_net_calibrated": (
-                #     CalibratedClassifierCV(
-                #         LogisticRegressionCV(cv=5, l1_ratios=[round(0.2 * i, 2) for i in range(0,6)],penalty='elasticnet', solver='saga', max_iter=N, random_state=seed+3*2),
-                #         ensemble=Tticrue
-                #     ), lambda x: x.calibrated_classifiers_[0].base_estimator.coef_[0]),
-                # "elastic_net": (SGDClassifier(loss="log_loss", penalty="elasticnet"), "coef_"),
-                # "lasso": (SGDClassifier(loss="log_loss", penalty="l1"), "coef_"),
-                # "svm": (SVC(kernel='linear', probability=True), "coef_"),
-                # "gradient_boost": (GradientBoostingClassifier(n_estimators=N, random_state=seed+4), "feature_importances_"),
-                # "xgboost": (XGBClassifier(n_estimators=N, n_jobs=-1, random_state=seed+5), "feature_importances_"),
-                # "neural_net": (MLPClassifier(max_iter=N, random_state=seed+6), "coefs_"),
-                # "els_net_old": (LogisticRegression(C=0, penalty='elasticnet', l1_ratio=0.5, solver='saga', max_iter=N, random_state=seed), "coef_"),
-                # "ridge": (SGDClassifier(loss="log_loss", penalty="l2"), "coef_"),
+            rf_algo = RandomForestClassifier(n_estimators=N, n_jobs=-1, random_state=seed+2)
+            self.models = models = {
+                "Logistic Regression": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, random_state=seed+1, Cs=[float(1e4)]), "coef_"),
+                "Logistic Lasso": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, penalty="l1", solver="saga", random_state=seed+7), "coef_"),
+                "Random Forest": (GridSearchCV(rf_algo, {'max_depth': [3, 5, 10], 'n_estimators': [N]}, cv=3, n_jobs=-1), "best_estimator_feature_importances"),
+                "Elastic Net": (LogisticRegressionCV(cv=10, l1_ratios=[round(0.25 * i, 2) for i in range(1,4)], penalty='elasticnet', solver='saga', n_jobs=-1, max_iter=N, random_state=seed+3), "coef_")
+                # "Support Vector Machine": (SVC(probability=True, kernel="linear"), "coef_"),
+                # "Gradient Boosting": (GradientBoostingClassifier(n_estimators=N, random_state=seed+4), "feature_importances_"),
+                # "Etreme Gradient Boosting": (XGBClassifier(n_estimators=N, n_jobs=-1, random_state=seed+5), "feature_importances_"),
+                # "Simple Neural Net": (MLPClassifier(max_iter=N, random_state=seed+6), "coefs_"),
+                # "Ridge Regression": (SGDClassifier(loss="log_loss", penalty="l2"), "coef_")
             }
         else:
             raise NotImplementedError("Regression not implemented yet.")
         if verbose:
-            print(f"Initialized {len(models)} models with {N} iterations/trees each.")
+            print(f"Initialized {len(models)} models with {N} iterations/trees/estimators each.")
         return models
 
     def get_model_names(self, classification_task: str) -> list:

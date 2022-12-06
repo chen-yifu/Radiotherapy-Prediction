@@ -5,30 +5,44 @@ class Data:
     def __init__(self):
         metadata_path = config.metadata_path
         raw_df_path = config.raw_df_path
-        processed_df_path = config.processed_df_path
+        processed_trainval_df_path = config.processed_trainval_df_path
+        processed_test_df_path = config.processed_test_df_path
         config.Data = self
         
         metadata = pd.read_excel(metadata_path)
         raw_df = pd.read_csv(raw_df_path).apply(pd.to_numeric, errors='coerce') if raw_df_path else pd.DataFrame()
-        processed_df = pd.read_csv(processed_df_path).apply(pd.to_numeric, errors='coerce') if processed_df_path else pd.DataFrame()
-        processed_PRE_df = processed_df.copy()
+        processed_trainval_df = pd.read_csv(processed_trainval_df_path).apply(pd.to_numeric, errors='coerce') if processed_trainval_df_path else pd.DataFrame()
+        processed_test_df = pd.read_csv(processed_test_df_path).apply(pd.to_numeric, errors='coerce') if processed_test_df_path else pd.DataFrame()
+        processed_trainvaltest_df = pd.concat([processed_trainval_df, processed_test_df], ignore_index=True)
+        print(f"processed_trainval_df shape: {pd.read_csv(processed_trainval_df_path).shape}")
+        print(f"processed_test_df shape: {pd.read_csv(processed_test_df_path).shape}")
+        processed_trainval_PRE_df = processed_trainval_df.copy()
+        processed_test_PRE_df = processed_test_df.copy()
         
-        for column in processed_PRE_df.columns:
+        for column in processed_trainval_PRE_df.columns:
             if column.startswith("POS_") or column.startswith("INT_"):
-                processed_PRE_df.drop(column, axis=1, inplace=True)
+                processed_trainval_PRE_df.drop(column, axis=1, inplace=True)
+                processed_test_PRE_df.drop(column, axis=1, inplace=True)
 
         self.storage = {
             "metadata": metadata,
             "raw": raw_df,
-            "processed": processed_df,
-            "processed_PRE": processed_PRE_df            
+            "processed_trainval": processed_trainval_df,
+            "processed_trainval_PRE": processed_trainval_PRE_df,
+            "processed_test": processed_test_df,
+            "processed_test_PRE": processed_test_PRE_df,
+            "processed_trainvaltest": processed_trainvaltest_df,
         }
         
         self.metadata = metadata
         self.raw_df = raw_df
-        self.processed_df = processed_df
-        self.processed_PRE_df = processed_PRE_df
-         
+        self.processed_trainval_df = processed_trainval_df
+        self.processed_test_df = processed_test_df
+        self.processed_trainval_PRE_df = processed_trainval_PRE_df
+        self.processed_test_PRE_df = processed_test_PRE_df
+        assert all(self.get_df("processed_trainval_PRE").columns == self.get_df("processed_test_PRE").columns)
+        
+        
 
     def _format_name(self, name: str, is_standardized=False, is_PRE_only=False, is_PRE_and_POS=False, is_ready=False) -> str:
         """Format the name of a DataFrame.
@@ -112,4 +126,4 @@ class Data:
         Returns:
             pd.DataFrame: The default DataFrame.
         """
-        return self.processed_df
+        return self.processed_trainval_df

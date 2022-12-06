@@ -1,7 +1,10 @@
 # Impute missing values using sklearn
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import PowerTransformer
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 import pandas as pd
@@ -33,18 +36,25 @@ class DataProcessor:
             max_iter (int): Maximum number of iterations.
             verbose (bool): Verbosity.
         """
-        # If there is a column with all-NaNs, drop the column
+        # If there is a column with all-NaNs, replace it with a column of zeros
         if df_unimputed.isna().all().any():
-            cols_to_drop = df_unimputed.columns[df_unimputed.isna().all()]
-            df_unimputed = df_unimputed.drop(cols_to_drop, axis=1)
-            print(f"Dropping all-NaN column: {list(cols_to_drop)}")
+            cols_to_replace = df_unimputed.columns[df_unimputed.isna().all()]
+            for col in cols_to_replace:
+                df_unimputed[col] = 0
+            print(f"Replacing all-NaN column with zeros: {list(cols_to_replace)}")
         if verbose:
             num_na = df_unimputed.isna().sum().sum()
             print(f"Started with {num_na} missing values in dataframe.")
         
         assert df_unimputed.columns.str.startswith("POS_").any() <= 1
         
-        imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose, imputation_order="random")
+        if config.use_KNN_imputer:
+            imp = KNNImputer(n_neighbors=5, weights="uniform", metric="nan_euclidean", copy=True, add_indicator=False)
+            print("Using KNNImputer")
+        else:
+            imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose, imputation_order="random", initial_strategy="median")
+            print("Using IterativeImputer")
+        
         if target_column != None:
             X = df_unimputed.drop(target_column, axis=1)
         else:
@@ -58,10 +68,10 @@ class DataProcessor:
             df_imputed[target_column] = df_unimputed[target_column]
         
         if verbose:
-            print(f"Standardized {len(list(X.columns))} columns", end=" ")
+            print(f"Imputed {len(list(X.columns))} columns", end=" ")
             if target_column != None:
                 print(f" except {target_column} target column was untouched.")        
-
+            print(f"The imputed dataframe has shape {df_imputed.shape}")
         return df_imputed
 
     def standardize(
@@ -78,27 +88,37 @@ class DataProcessor:
             df_unstandardized (DataFrame): DataFrame with unstanardized values.
             target_column (str): Name of the target column.
         """
+        use_yeo_johnson = config.use_yeo_johnson
         # If there is a column with all-NaNs, drop the column
         if df_unstandardized.isna().all().any():
-            cols_to_drop = df_unstandardized.columns[df_unstandardized.isna().all()]
-            df_unstandardized = df_unstandardized.drop(cols_to_drop, axis=1)
-            print(f"Dropping all-NaN column: {list(cols_to_drop)}")
+            cols_to_replace = df_unstandardized.columns[df_unstandardized.isna().all()]
+            for col in cols_to_replace:
+                df_unstandardized[col] = 0
+            print(f"Replacing all-NaN column with zeros: {list(cols_to_replace)}")
 
         scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
+        min_max_scaler = MinMaxScaler()
+        yeo_johnson_scaler = PowerTransformer(method="yeo-johnson", standardize=False, copy=True)
 
         if target_column != None:
             X = df_unstandardized.drop(target_column, axis=1)
         else:
             X = df_unstandardized
-
-        X_scaled = scaler.fit_transform(X)
+        if use_yeo_johnson:
+            X_scaled = min_max_scaler.fit_transform(X)
+            X_scaled = yeo_johnson_scaler.fit_transform(X_scaled)
+            print("Using MinMaxScaler and Yeo-Johnson PowerTransformer")
+        else:
+            X_scaled = scaler.fit_transform(X)
+            print("Using StandardScaler")
+            
         df_scaled = pd.DataFrame(X_scaled, columns=X.columns)
         
         if target_column != None:
             y = df_unstandardized[target_column]
             df_scaled[target_column] = y
         if verbose:
-            print(f"Standardized {len(list(X.columns))} columns", end="")
+            print(f"Standardized {len(list(X.columns))} columns. ", end="")
             if target_column != None:
                 print(f" except {target_column} target column was untouched.")
                     
@@ -107,16 +127,19 @@ class DataProcessor:
     
     def generate_ready_df(
         self, 
+        df,
         target_column, 
         experiment_name, 
         seed, 
         use_PRE_only, 
         filter,
-        do_impute=True, 
-        impute_max_iter=10, 
-        verbose=False, 
-        subset_cols=None, 
+        do_impute=True,
+        impute_max_iter=10,
+        verbose=False,
+        subset_cols=None,
         cols_to_exclude=[],
+        do_standardize=False
+        
     ) -> pd.DataFrame:
         """Generate a DataFrame ready for training.
 
@@ -139,7 +162,6 @@ class DataProcessor:
         Data = config.Data
         df_name = experiment_name
         
-        df = Data.get_df("processed").copy()
         if filter is not None:
             df = filter(df)
         if cols_to_exclude:
@@ -155,19 +177,14 @@ class DataProcessor:
         df = df.reset_index(drop=True)
         X = df.drop(target_column, axis=1)
         y = df[target_column]
-        # display(df)
-        # print("df shape:", df.shape)
-        # print("X.shape, y.shape", X.shape, y.shape)
-        X = self.standardize(X, target_column=None, verbose=verbose)
-        # print("X.shape after standardization", X.shape)
+        
+        if do_standardize:
+            X = self.standardize(X, target_column=None, verbose=verbose)
+            print(f"Standardized {len(list(X.columns))} columns. ")
+            
         X = self.impute(X, target_column=None, max_iter=impute_max_iter, verbose=True, seed=seed)
-        # print("X.shape after imputation", X.shape)
         X_and_y = pd.concat([X, y], axis=1)
-        # print("X_and_y shape:", X_and_y.shape)
-        # X_and_y = X_and_y.dropna(axis=0, how="any")
-        # if verbose and X_and_y.isna().sum().sum() > 0:
-        #     print(f"Warning: {X_and_y.isna().sum().sum()} missing values in dataframe.")
-        # assert X_and_y.isna().sum().sum() == 0
+
         for col in cols_to_exclude:
             assert col not in X_and_y.columns
         

@@ -51,30 +51,49 @@ class Evaluator:
 
         # Create cross-tab table
         if VarReader.is_dtype_categorical(dtype1) and VarReader.is_dtype_categorical(dtype2):
-            ax.set_title(f"{col1} ({section1})\nvs\n{col2} ({section2})", fontsize=24)
+            ax.set_title(f"Prediction vs. Actual", fontsize=24)
+            include_margins = False
             # continue
             # If both are categorical, create a contingency table (confusion matrix) with percentages and margins
-            df_cross_tab = pd.crosstab(df[col1], df[col2], margins=True)
+            total_cases = df.shape[0]
+            df_cross_tab = pd.crosstab(df[col1], df[col2], margins=include_margins)
+            # Print shape and head of the cross-tab table
+            print("column: ", col1, "row: ", col2)
+            print(f"Shape of cross-tab table: {df_cross_tab.shape}")
+            print(f"Head of cross-tab table:\n{df_cross_tab.head()}")
             # Rename "All" with "Total" in the df_cross_tab columns and indices
-            df_cross_tab.columns = df_cross_tab.columns.tolist()[:-1] + ["Total"]
-            df_cross_tab.index = df_cross_tab.index.tolist()[:-1] + ["Total"]
+            if include_margins:
+                df_cross_tab.columns = df_cross_tab.columns.tolist()[:-1] + ["Total"]
+                df_cross_tab.index = df_cross_tab.index.tolist()[:-1] + ["Total"]
+            
             # Create percentages from cross-tab table
             values = df_cross_tab.values
             # Calculate percentages excluding the last row and last column
-            percentages = values[:-1, :-1] / (values[:-1, :-1].sum()) * 100
+            if include_margins:
+                percentages = values[:-1, :-1] / (values[:-1, :-1].sum()) * 100
+            else:
+                percentages = values / (values.sum()) * 100
             # Create column/row-wise margins of percentages 2D array
             row_margins = np.sum(percentages, axis=1)
             # Append 100 to row_margins
             row_margins = np.append(row_margins, 100)
             col_margins = np.sum(percentages, axis=0) 
-            # Append col_margins to the end of percentages
-            percentages = np.append(percentages, col_margins.reshape(1, percentages.shape[1]), axis=0)
-            # Append the row_margins to the end of percentages
-            percentages = np.append(percentages, row_margins.reshape(percentages.shape[0], 1), axis=1)
-            annotations = np.array([f"{x}\n({round(y)}%)" for x, y in zip(values.flatten(), percentages.flatten())]).reshape(df_cross_tab.shape)
+            if include_margins:
+                # Append col_margins to the end of percentages
+                percentages = np.append(percentages, col_margins.reshape(1, percentages.shape[1]), axis=0)
+                # Append the row_margins to the end of percentages
+                percentages = np.append(percentages, row_margins.reshape(percentages.shape[0], 1), axis=1)
+            # annotations = np.array([f"{round(y)}%\n({x}/{total_cases})" for x, y in zip(values.flatten(), percentages.flatten())]).reshape(df_cross_tab.shape)
+            denominator = values[:-1, :-1].sum() if include_margins else values.sum()
+            annotation_data = np.array([f"{round(y)}% ({x}/{denominator})" for x, y in zip(values.flatten(), percentages.flatten())])
+            annotations = annotation_data.reshape(df_cross_tab.shape)
             # Rename the x-ticks and y-ticks with the options
-            y_tick_labels = list([f"{k}, {v}" for k, v in options1.items()]) + ["Total"]
-            x_tick_labels = list([f"{k}, {v}" for k, v in options2.items()]) + ["Total"]
+
+            y_tick_labels = list([f"{k}, {v}" for k, v in options1.items()]) # + ["Total"]
+            x_tick_labels = list([f"{k}, {v}" for k, v in options2.items()]) # + ["Total"]
+            if include_margins:
+                y_tick_labels = y_tick_labels + ["Total"]
+                x_tick_labels = x_tick_labels + ["Total"]
             # Rotate the x-ticks and y-ticks
             # Plot the cross-tab table, which is a heatmap with no colors and black grid
             sns.heatmap(
@@ -115,8 +134,8 @@ class Evaluator:
             # print("cat_options", cat_options, data.keys())
             ax.boxplot(data.values(), labels=[f"{k}, {v} (N={len(data[k])})" for k, v in cat_options.items()])
             for i, (cat, data_vals) in enumerate(data.items()):
-                x_pos = np.random.normal(i+1, 0.02, len(data_vals))
-                ax.scatter(x_pos, data_vals, alpha=0.2)
+                x_pos = np.random.normal(i+1, 0.015, len(data_vals))
+                ax.scatter(x_pos, data_vals, alpha=0.20)
             # Add gridlines
             ax.grid(which="major", axis="x", linestyle="-", linewidth=0.3, color="grey")
             ax.grid(which="major", axis="y", linestyle="-", linewidth=0.3, color="grey")
@@ -169,7 +188,7 @@ class Evaluator:
         y_label = y_label[:80] + "..." if len(y_label) > 80 else y_label
         ax.set_xlabel(x_label, fontsize=20)
         ax.set_ylabel(y_label, fontsize=20)
-        ax.tick_params(axis="both", which="major", labelsize=15)
+        ax.tick_params(axis="both", which="major", labelsize=20)
         
         
     def plot_auc_curve(self, df, pred_col, truth_col, ax):
@@ -188,7 +207,7 @@ class Evaluator:
         ax.set_ylim([0.0, 1.05])
         ax.set_xlabel('False Positive Rate', fontsize=20)
         ax.set_ylabel('True Positive Rate', fontsize=20)
-        ax.tick_params(axis='both', which='major', labelsize=15)
+        ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_title(f'Receiver Operating Characteristic Curve\n(AUC = {round(roc_auc, 4)})', fontsize=24)
         return ax
     
@@ -210,7 +229,7 @@ class Evaluator:
         ax.grid(True)
         ax.set_ylim([0.0, 1.05])
         ax.set_xlim([0.0, 1.0])
-        ax.tick_params(axis='both', which='major', labelsize=15)
+        ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_title(f'Precision-Recall Curve\n(Avg Precision = {round(average_precision, 4)})', fontsize=24)
         return ax
     
@@ -240,18 +259,20 @@ class Evaluator:
         ax_calibration.set_ylabel("True Probability", fontsize=20)
         ax_calibration.set_title("Calibration Curve", fontsize=24)
         ax_calibration.legend(loc="lower right", prop={"size": 24})
+        ax_calibration.grid(True)
         ax_calibration.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
-        ax_calibration.tick_params(axis="both", which="major", labelsize=15)
+        ax_calibration.tick_params(axis="both", which="major", labelsize=20)
         if show_plot:
             self.show_plot_and_save(f"{plot_title}_calibration_curve")
         
         # Plot the histogram for y_pred on ax_histogram
         ax_histogram.hist(y_pred_prob, bins=100, alpha=0.7, label="Predicted Probabilities")
-        ax_histogram.set_xlabel("Distribution of Predicted Probabilities", fontsize=20)
+        ax_histogram.grid(True)
+        ax_histogram.set_xlabel("Predicted Probability", fontsize=20)
         ax_histogram.set_ylabel("Count", fontsize=20)
         ax_histogram.set_title("Histogram of Predicted Probabilities", fontsize=24)
         ax_histogram.legend(loc="upper right", prop={"size": 24})
-        ax_histogram.tick_params(axis="both", which="major", labelsize=15)
+        ax_histogram.tick_params(axis="both", which="major", labelsize=20)
         if show_plot:
             self.show_plot_and_save(f"{plot_title}_predicted_probability_histogram")
         
@@ -383,24 +404,27 @@ class Evaluator:
         return nomogram_eval
 
 
-    def evaluate_experiment(self, VarReader, target_column, experiment_name, results, inclusion_criteria, show_results=False):
+    def evaluate_experiment(self, VarReader, target_column, experiment_name, results, inclusion_criteria, show_results=False, is_standardized=True):
         model_eval_results = {}
         result_df = results[experiment_name]["result_df"]
-        #     display(result_df)
+        # display(result_df.head())
+        shape_before = result_df.shape
         # result_df = result_df[~result_df[get_nomogram_columns(target_column)].isna().any(axis=1)]
         # result_df = result_df[result_df["PRE_susp_LN_prsnt_composite"] > 0]
         # InclusionCriteria = config.InclusionCriteria
-        eligibility_dict = inclusion_criteria.get_eligibility_dict(standardized=True)
+        eligibility_dict = inclusion_criteria.get_eligibility_dict(standardized=is_standardized)
         if eligibility_dict is not None:
             result_df = result_df[result_df["PRE_record_id"].map(eligibility_dict)]
-            print(f"Inclusion criteria applied. {len(result_df)} records remain eligible.")
+            shape_after = result_df.shape
+            print("Length of eligibility dict:", len(eligibility_dict))
+            print(f"Inclusion criteria applied. Shape before: {shape_before}, shape after: {shape_after}")
         
         for pred_col_prob, pred_col_class, model_name in zip(results[experiment_name]["prob_columns"], results[experiment_name]["class_columns"], results[experiment_name]["model_names"]):
-            show_results = show_results and model_name in config.models_to_show
+            # show_results = show_results and model_name in config.models_to_show
             if show_results:
                 print("-"*50, model_name, "-"*50)
             else:
-                print("will not show results for", model_name)
+                print(f"Evaluating {model_name}'s predictions.")
             VarReader.add_var(pred_col_prob, section="ML", dtype="numeric", label=f"Predicted Probability", options=dict(VarReader.read_var_attrib(target_column, has_missing=False)["options"]))
             VarReader.add_var(pred_col_class, section="ML", dtype="categorical", label=f"Predicted Class", options=dict(VarReader.read_var_attrib(target_column, has_missing=False)["options"]))
             eval_result = self.evaluate_predictions(
@@ -418,6 +442,33 @@ class Evaluator:
         return model_eval_results, eval_num_records
 
     
+    def bootstrap_se_auc(self, result_df, y_pred_col, y_truth_col, n_bootstraps=10000):
+        # Drop rows where y_pred_col or y_truth_col is NaN
+        result_df = result_df.dropna(subset=[y_pred_col, y_truth_col])
+        y_pred = result_df[y_pred_col]
+        # n_bootstraps = config.n_bootstraps
+        bootstrapped_scores = []
+        for i in range(n_bootstraps):
+            # bootstrap by sampling with replacement on the prediction indices
+            indices = np.random.randint(low=0, high=len(result_df), size=len(result_df))
+            if len(np.unique(result_df[y_truth_col].iloc[indices])) < 2:
+                # We need at least one positive and one negative sample for ROC AUC
+                # to be defined: reject the sample
+                continue
+            else:
+                score = roc_auc_score(result_df[y_truth_col].iloc[indices], y_pred.iloc[indices])
+                bootstrapped_scores.append(score)
+        sorted_scores = np.array(bootstrapped_scores)
+        sorted_scores.sort()
+        confidence_lower = sorted_scores[int(0.025 * len(sorted_scores))]
+        confidence_upper = sorted_scores[int(0.975 * len(sorted_scores))]
+        mean_score = np.mean(bootstrapped_scores)
+        return {
+            "auc_mean": mean_score,
+            "confidence_lower": confidence_lower,
+            "confidence_upper": confidence_upper,
+            "auc_se": (confidence_upper - confidence_lower) / 2,
+        }
     # def plot_calibration_curve(
     #     self, 
     #     result_df, 
@@ -490,51 +541,88 @@ class Evaluator:
         temp_df = df_ready.copy()
         print("-"*20, f"stat. significance between {target_column} and", subset_cols_name, "-"*20)
         col2pval = {}
+        col2OR = {}
         for column in subset_cols:
+            if column == target_column:
+                continue
             if column not in temp_df.columns:
                 continue
             try:
-                if column != target_column:
-                    # Calculate the p-value while ignoring NaNs in both columns
-                    temp_df_column = temp_df[[column, target_column]].dropna()
-                    num_unique = len(temp_df_column[column].unique())
-                    if num_unique > 5:
-                        col_type = "continuous"
-                    elif num_unique <= 1:
-                        continue
-                    else:  # i.e., 2 <= num_unique <= 5
-                        col_type = "categorical"
-                    if target_type == "categorical" and col_type == "categorical":
-                        # Use the chi-squared test
-                        test_name = "Chi^2"
-                        chi2, p, dof, expected = chi2_contingency(pd.crosstab(temp_df_column[column], temp_df_column[target_column]))
-                    elif target_type == "categorical" and col_type == "continuous":
-                        # Use the ANOVA test
-                        test_name = "ANOVA/t-test"
-                        f_stat, p = f_oneway(*[group[column].dropna().values for name, group in temp_df_column.groupby(target_column)])
-                    elif target_type == "continuous" and col_type == "categorical":
-                        pass
-                    else:
-                        pass
-                    col2pval[column] = p
+                # Calculate the p-value while ignoring NaNs in both columns
+                temp_df_column = temp_df[[column, target_column]].dropna()
+                num_unique = len(temp_df_column[column].unique())
+                if num_unique > 5:
+                    col_type = "continuous"
+                elif num_unique <= 1:
+                    p = 1
+                else:  # i.e., 2 <= num_unique <= 5
+                    col_type = "categorical"
+                if target_type == "categorical" and col_type == "categorical":
+                    # Use the chi-squared test
+                    test_name = "Chi^2"
+                    chi2, p, dof, expected = chi2_contingency(pd.crosstab(temp_df_column[column], temp_df_column[target_column]))
+                elif target_type == "categorical" and col_type == "continuous":
+                    # Use the ANOVA test
+                    test_name = "ANOVA/t-test"
+                    f_stat, p = f_oneway(*[group[column].dropna().values for name, group in temp_df_column.groupby(target_column)])
+                elif target_type == "continuous" and col_type == "categorical":
+                    pass
+                else:
+                    pass
+                col2pval[column] = p
                         
             except Exception as e:
                 # print(f"Error with column {column}: {e}")    
                 raise e
+            
+            # Calculate odds ratio
+            from scipy.stats import chi2_contingency
+            
+            if target_type == "categorical" and col_type == "categorical":
+                # Build contingency table
+                contingency_table = pd.crosstab(temp_df_column[column], temp_df_column[target_column])                
+                if contingency_table.shape != (2, 2):
+                    oddsratio = np.nan
+                else:
+                    # Calculate odds ratio
+                    oddsratio, pvalue = stats.fisher_exact(contingency_table)
+                col2OR[column] = oddsratio
+            elif target_type == "categorical" and col_type == "continuous":
+                col2OR[column] = np.nan
         
-        if len(col2pval) > 0:
-            # Delete entries with NaN p-values
-            col2pval = {k: v for k, v in col2pval.items() if not np.isnan(v)}
-            # Sort and print the p-values in ascending order
-            sorted_pvals = sorted(col2pval.items(), key=lambda x: x[1])
-            max_len = max([len(x[0]) for x in sorted_pvals])
-            for col1, p in sorted_pvals:
-                significance_level = self.get_significance_level(p)
-                print(f"{col1: <{max_len}}: {p:.8f} {significance_level}")
-                        
-            return col2pval
-        else:
-            return None
+        # For each column, print its p-value and odds ratio
+
+        for col1, p in col2pval.items():
+            max_len = 50
+            significance_level = self.get_significance_level(p)
+            odds_ratio = col2OR[col1]
+            print(f"{col1: <{max_len}}: {p:.8f} {significance_level} | OR = {odds_ratio:.2f}")
+
+                
+        # if len(col2pval) > 0:
+        #     # Delete entries with NaN p-values
+        #     col2pval = {k: v for k, v in col2pval.items() if not np.isnan(v)}
+        #     # Sort and print the p-values in ascending order
+        #     sorted_pvals = sorted(col2pval.items(), key=lambda x: x[1])
+        #     max_len = max([len(x[0]) for x in sorted_pvals])
+        #     for col1, p in sorted_pvals:
+        #         significance_level = self.get_significance_level(p)
+        #         print(f"{col1: <{max_len}}: {p:.8f} {significance_level}")
+        # else:
+        #     print("No columns to test")
+        
+        # if len(col2OR) > 0:
+        #     # Delete entries with NaN p-values
+        #     col2OR = {k: v for k, v in col2OR.items() if not np.isnan(v)}
+        #     # Sort and print the p-values in ascending order
+        #     sorted_OR = sorted(col2OR.items(), key=lambda x: x[1])
+        #     max_len = max([len(x[0]) for x in sorted_OR])
+        #     for col1, OR in sorted_OR:
+        #         print(f"{col1: <{max_len}}: {OR:.8f}")    
+        return {
+            "pval": col2pval,
+            "OR": col2OR
+        }
     
     
     def show_plot_and_save(self, plot_name, legend=None):
