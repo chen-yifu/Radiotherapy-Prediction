@@ -16,6 +16,7 @@ class DataProcessor:
 
     def __init__(self) -> None:
         config.DataProcessor = self
+        self.scaler = self.min_max_scaler = self.yeo_johnson_scaler = None
         pass
     
     @ignore_warnings(category=ConvergenceWarning)
@@ -52,7 +53,7 @@ class DataProcessor:
             imp = KNNImputer(n_neighbors=5, weights="uniform", metric="nan_euclidean", copy=True, add_indicator=False)
             print("Using KNNImputer")
         else:
-            imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose, imputation_order="random", initial_strategy="median")
+            imp = IterativeImputer(max_iter=max_iter, random_state=seed, verbose=verbose, imputation_order="ascending", initial_strategy="median")
             print("Using IterativeImputer")
         
         if target_column != None:
@@ -96,9 +97,21 @@ class DataProcessor:
                 df_unstandardized[col] = 0
             print(f"Replacing all-NaN column with zeros: {list(cols_to_replace)}")
 
-        scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
-        min_max_scaler = MinMaxScaler()
-        yeo_johnson_scaler = PowerTransformer(method="yeo-johnson", standardize=False, copy=True)
+        if self.scaler == None:
+            scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
+            print("Initializing StandardScaler")
+        else:
+            scaler = self.scaler
+        if self.min_max_scaler == None:
+            min_max_scaler = MinMaxScaler()
+            print("Initializing MinMaxScaler")
+        else:
+            min_max_scaler = self.min_max_scaler
+        if self.yeo_johnson_scaler == None:
+            yeo_johnson_scaler = PowerTransformer(method="yeo-johnson", standardize=False, copy=True)
+            print("Initializing Yeo-Johnson PowerTransformer")
+        else:
+            yeo_johnson_scaler = self.yeo_johnson_scaler
 
         if target_column != None:
             X = df_unstandardized.drop(target_column, axis=1)

@@ -14,7 +14,8 @@ class Initializer:
         processed_test_df_path=None,
         DPI=150, 
         models_to_show=[],
-        n_bootstraps=10000
+        n_bootstraps=10000,
+        predictor_N=1000,
         ):
         
         config.metadata_path = self.metadata_path = metadata_path
@@ -28,6 +29,7 @@ class Initializer:
         config.use_KNN_imputer = use_KNN_imputer
         config.use_yeo_johnson = use_yeo_johnson
         config.n_bootstraps = n_bootstraps
+        config.predictor_N = predictor_N
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.expand_frame_repr', False)

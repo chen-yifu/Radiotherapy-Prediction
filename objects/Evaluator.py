@@ -85,7 +85,7 @@ class Evaluator:
                 percentages = np.append(percentages, row_margins.reshape(percentages.shape[0], 1), axis=1)
             # annotations = np.array([f"{round(y)}%\n({x}/{total_cases})" for x, y in zip(values.flatten(), percentages.flatten())]).reshape(df_cross_tab.shape)
             denominator = values[:-1, :-1].sum() if include_margins else values.sum()
-            annotation_data = np.array([f"{round(y)}% ({x}/{denominator})" for x, y in zip(values.flatten(), percentages.flatten())])
+            annotation_data = np.array([f"{round(y)}%\n({x}/{denominator})" for x, y in zip(values.flatten(), percentages.flatten())])
             annotations = annotation_data.reshape(df_cross_tab.shape)
             # Rename the x-ticks and y-ticks with the options
 
@@ -251,10 +251,10 @@ class Evaluator:
         rmse = round(np.sqrt(mean_squared_error(y_test, y_pred_prob)), 3)
         # Calculate the log-loss
         loss = round(log_loss(y_test, y_pred_prob), 3)
-        target_true_binned, pred_probs_binned = calibration_curve(y_test, y_pred_prob, n_bins=10)
+        target_true_binned, pred_probs_binned = calibration_curve(y_test, y_pred_prob, n_bins=5)
         ax_calibration.plot(pred_probs_binned, target_true_binned, label=f"{rmse} RMSE, {loss} Log-Loss", alpha=0.5, marker="o", linestyle="None", markersize=10)
         fit_line = np.polyfit(pred_probs_binned, target_true_binned, 1)
-        ax_calibration.plot(pred_probs_binned, fit_line[0] * pred_probs_binned + fit_line[1], linestyle="-", alpha=0.7)
+        ax_calibration.plot(pred_probs_binned, fit_line[0] * pred_probs_binned + fit_line[1], linestyle="-", alpha=0.7, color="navy")
         ax_calibration.set_xlabel("Predicted Probability", fontsize=20)
         ax_calibration.set_ylabel("True Probability", fontsize=20)
         ax_calibration.set_title("Calibration Curve", fontsize=24)
@@ -467,7 +467,8 @@ class Evaluator:
             "auc_mean": mean_score,
             "confidence_lower": confidence_lower,
             "confidence_upper": confidence_upper,
-            "auc_se": (confidence_upper - confidence_lower) / 2,
+            # calculate the standard error from 95% confidence interval
+            "auc_se": (confidence_upper - confidence_lower) / 4
         }
     # def plot_calibration_curve(
     #     self, 

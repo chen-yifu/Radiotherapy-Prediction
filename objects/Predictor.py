@@ -91,18 +91,24 @@ class Predictor:
                     models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
                 else:
                     models = init_models
-                    print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
+                    if i == 0:
+                        print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
                 for name, (model, feature_score__key) in models.items():
-                    print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
+                    if i == 0:
+                        print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
                     if fit_models:
                         model.fit(X_train, y_train)
-                        print_with_color(f"Trained {name} on 'other folds' to predict fold {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                        if i == 0:
+                            print_with_color(f"Trained {name} on 'other folds' to predict fold {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
                     else:
-                        print_with_color(f"Inferencing pre-trained {name} on 'fold' {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                        if i == 0:
+                            print_with_color(f"Inferencing pre-trained {name} on 'fold' {i+1}.{bcolors.ENDC}", color=bcolors.OKGREEN)
                     
                     if fit_models:
-                        print(f"Train index: {train_index[:70]}...")
-                    print(f"Validation index: {test_index[:10]}...")
+                        if i == 0:
+                            print(f"Train index: {train_index[:70]}...")
+                    if i == 0:
+                        print(f"Validation index: {test_index[:10]}...")
                     y_prob = model.predict_proba(X_test)[:, 1]
                     y_class = model.predict(X_test)
                     predictions_prob_col = f"PRE_{target_column}_{name}_prob"
@@ -134,19 +140,24 @@ class Predictor:
                         for feature, score in zip(X_train.columns, feature_score__key(model)):
                             feature_scores[name].append((feature, score))
         else:
+            i = 0
             X = X.drop("PRE_record_id", axis=1)
             if init_models is None:
                 models = self.initialize_models(use_full_model, verbose, classification_task=classification_task, seed=seed)
             else:
                 models = init_models
-                print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
+                if i == 0:
+                    print_with_color("Using pre-trained models", color=bcolors.OKGREEN)
             for name, (model, feature_score__key) in models.items():
-                print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
+                if i == 0:
+                    print_with_color(f"Using {name}...", color=bcolors.OKGREEN)
                 if fit_models:
                     model.fit(X, y)
-                    print_with_color(f"Trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                    if i == 0:
+                        print_with_color(f"Trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
                 else:
-                    print_with_color(f"Inferencing pre-trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
+                    if i == 0:
+                        print_with_color(f"Inferencing pre-trained {name} on all data.{bcolors.ENDC}", color=bcolors.OKGREEN)
                 if not fit_models:
                     # Model is already trained, so predict
                     y_prob = model.predict_proba(X)[:, 1]
@@ -209,7 +220,7 @@ class Predictor:
             use_full_model (bool): If True, allow higher amount of computation to find optimal models.
         """
         if use_full_model:
-            N = 1000
+            N = config.predictor_N
             if verbose:
                 print("Using full model.")
         else:
@@ -217,12 +228,13 @@ class Predictor:
             if verbose:
                 print("Using small model.")
         if classification_task:
+            refit = True
             rf_algo = RandomForestClassifier(n_estimators=N, n_jobs=-1, random_state=seed+2)
             self.models = models = {
-                "Logistic Regression": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, random_state=seed+1, Cs=[float(1e4)]), "coef_"),
-                "Logistic Lasso": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, penalty="l1", solver="saga", random_state=seed+7), "coef_"),
-                "Random Forest": (GridSearchCV(rf_algo, {'max_depth': [3, 5, 10], 'n_estimators': [N]}, cv=3, n_jobs=-1), "best_estimator_feature_importances"),
-                "Elastic Net": (LogisticRegressionCV(cv=10, l1_ratios=[round(0.25 * i, 2) for i in range(1,4)], penalty='elasticnet', solver='saga', n_jobs=-1, max_iter=N, random_state=seed+3), "coef_")
+                "Logistic Regression": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, random_state=seed+1, Cs=[float(1e4)], refit=refit), "coef_"),
+                "Logistic Lasso": (LogisticRegressionCV(cv=10, max_iter=N, n_jobs=-1, penalty="l1", solver="saga", Cs=[0.05], random_state=seed+7, refit=refit), "coef_"),
+                "Random Forest": (GridSearchCV(rf_algo, {'max_depth': [3, 5, 10], 'n_estimators': [N]}, cv=3, n_jobs=-1, refit=refit), "best_estimator_feature_importances"),
+                "Elastic Net": (LogisticRegressionCV(cv=10, l1_ratios=[round(0.25 * i, 2) for i in range(1,4)], penalty='elasticnet', solver='saga', n_jobs=-1, Cs=[0.05], max_iter=N, random_state=seed+3, refit=refit), "coef_")
                 # "Support Vector Machine": (SVC(probability=True, kernel="linear"), "coef_"),
                 # "Gradient Boosting": (GradientBoostingClassifier(n_estimators=N, random_state=seed+4), "feature_importances_"),
                 # "Etreme Gradient Boosting": (XGBClassifier(n_estimators=N, n_jobs=-1, random_state=seed+5), "feature_importances_"),
